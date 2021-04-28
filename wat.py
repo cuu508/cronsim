@@ -34,6 +34,10 @@ def _parse(field, value):
             result.update(_parse(field, item))
         return sorted(result)
 
+    if "#" in value and field == Field.DOW:
+        term, nth = value.split("#")
+        return [(_int(field, term), int(nth))]
+
     if "/" in value:
         term, step = value.split("/")
         items = _parse(field, term)
@@ -49,11 +53,8 @@ def _parse(field, value):
         end = _int(field, end)
         return list(range(start, end + 1))
 
-    if value == "L":
-        if field == Field.DAY:
-            return [Wat.LAST]
-        if field == Field.DOW:
-            return [7]
+    if value == "L" and field == Field.DAY:
+        return [Wat.LAST]
 
     return [_int(field, value)]
 
@@ -115,14 +116,31 @@ class Wat(object):
         self.dt = self.dt.replace(minute=self.min_m)
         return True
 
+    def get_weekday_index(self):
+        needle, count = self.dt.date(), 0
+        while needle.month == self.dt.month:
+            needle = needle - td(days=7)
+            count += 1
+
+        return count
+
     def match_day(self):
+        # Does the day of the month match?
         if self.dt.day in self.days:
             return True
-        if self.dt.weekday() + 1 in self.weekdays:
-            return True
+
         if Wat.LAST in self.days:
             _, last = calendar.monthrange(self.dt.year, self.dt.month)
-            return self.dt.day == last
+            if self.dt.day == last:
+                return True
+
+        # Does the day of the week match?
+        dow = self.dt.weekday() + 1
+        if dow in self.weekdays:
+            return True
+
+        if (dow, self.get_weekday_index()) in self.weekdays:
+            return True
 
     def advance_day(self):
         """Roll forward the day component until it satisfies the constraints.
@@ -178,6 +196,6 @@ class Wat(object):
 
 
 if __name__ == '__main__':
-    a = Wat("15,30,45 21 29 2 1", datetime.now())
+    a = Wat("0 0 * * 1", datetime.now())
     for i in range(0, 10):
         print("Here's what we got: ", next(a))

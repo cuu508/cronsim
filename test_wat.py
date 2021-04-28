@@ -47,10 +47,6 @@ class TestParse(unittest.TestCase):
         w = Wat("* * L * *", NOW)
         self.assertEqual(w.days, [Wat.LAST])
 
-    def test_it_parses_dow_l(self):
-        w = Wat("* * * * L", NOW)
-        self.assertEqual(w.weekdays, [7])
-
     def test_it_parses_unrestricted_day_restricted_dow(self):
         w = Wat("* * * * 1", NOW)
         self.assertEqual(w.days, [])
@@ -61,11 +57,19 @@ class TestParse(unittest.TestCase):
         self.assertEqual(w.days, [1])
         self.assertEqual(w.weekdays, [])
 
+    def test_it_parses_nth_weekday(self):
+        w = Wat("* * * * 1#2", NOW)
+        self.assertEqual(w.weekdays, [(1, 2)])
+
 
 class TestIterator(unittest.TestCase):
     def test_it_handles_l(self):
         dt = next(Wat("1 1 L * *", NOW))
         self.assertEqual(dt.isoformat(), "2020-01-31T01:01:00")
+
+    def test_it_handles_nth_weekday(self):
+        dt = next(Wat("1 1 * * 1#2", NOW))
+        self.assertEqual(dt.isoformat(), "2020-01-13T01:01:00")
 
 
 if __name__ == '__main__':
