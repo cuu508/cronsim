@@ -19,7 +19,7 @@ RANGES = [
     list(range(0, 7)),
 ]
 
-SYMBOLIC_DAYS = "MON TUE WED THU FRI SAT SUN".split()
+SYMBOLIC_DAYS = "SUN MON TUE WED THU FRI SAT".split()
 SYMBOLIC_MONTHS = "JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC".split()
 
 
@@ -30,7 +30,7 @@ def _int(field, value):
 
     if field == Field.DOW:
         if value.upper() in SYMBOLIC_DAYS:
-            value = SYMBOLIC_DAYS.index(value.upper()) + 1
+            value = SYMBOLIC_DAYS.index(value.upper())
 
     return int(value)
 
@@ -54,7 +54,8 @@ def _parse(field, value):
         items = _parse(field, term)
         if len(items) == 1:
             start = items[0]
-            items = [v for v in RANGES[field] if v >= start]
+            end = max(RANGES[field])
+            items = list(range(start, end + 1))
 
         return items[::int(step)]
 
@@ -64,7 +65,7 @@ def _parse(field, value):
         end = _int(field, end)
         return list(range(start, end + 1))
 
-    if value == "L" and field == Field.DAY:
+    if field == Field.DAY and value in ("L", "l"):
         return [CronSim.LAST]
 
     return [_int(field, value)]
@@ -206,6 +207,8 @@ class CronSim(object):
 
 
 if __name__ == '__main__':
-    a = CronSim("0 1 * * */2", datetime.now())
-    for i in range(0, 10):
-        print("Here's what we got: ", next(a))
+    # a = CronSim("0 1 * * */2", datetime.now())
+    # for i in range(0, 10):
+    #     print("Here's what we got: ", next(a))
+
+    print(_parse(Field.DAY, "0/10"))

@@ -55,6 +55,10 @@ class TestParse(unittest.TestCase):
         w = CronSim("* * L * *", NOW)
         self.assertEqual(w.days, [CronSim.LAST])
 
+    def test_it_parses_day_lowercase_l(self):
+        w = CronSim("* * l * *", NOW)
+        self.assertEqual(w.days, [CronSim.LAST])
+
     def test_it_parses_unrestricted_day_restricted_dow(self):
         w = CronSim("* * * * 1", NOW)
         self.assertEqual(w.days, [])
@@ -83,6 +87,10 @@ class TestParse(unittest.TestCase):
 
     def test_it_parses_weekday_range_from_zero(self):
         w = CronSim("* * * * 0-2", NOW)
+        self.assertEqual(w.weekdays, [0, 1, 2])
+
+    def test_it_parses_sun_tue(self):
+        w = CronSim("* * * * sun-tue", NOW)
         self.assertEqual(w.weekdays, [0, 1, 2])
 
     def test_it_starts_weekday_step_from_zero(self):
