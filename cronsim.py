@@ -65,16 +65,16 @@ def _parse(field, value):
         return list(range(start, end + 1))
 
     if value == "L" and field == Field.DAY:
-        return [Wat.LAST]
+        return [CronSim.LAST]
 
     return [_int(field, value)]
 
 
-class WatError(Exception):
+class CronSimError(Exception):
     pass
 
 
-class Wat(object):
+class CronSim(object):
     LAST = 1000
 
     def __init__(self, expr, dt):
@@ -82,7 +82,7 @@ class Wat(object):
 
         parts = expr.split()
         if len(parts) != 5:
-            raise WatError("Bad expression, wrong number of fields")
+            raise CronSimError("Bad expression, wrong number of fields")
 
         self.minutes = _parse(Field.MINUTE, parts[0])
         self.hours = _parse(Field.HOUR, parts[1])
@@ -136,7 +136,7 @@ class Wat(object):
         if d.day in self.days:
             return True
 
-        if Wat.LAST in self.days:
+        if CronSim.LAST in self.days:
             _, last = calendar.monthrange(d.year, d.month)
             if d.day == last:
                 return True
@@ -206,6 +206,6 @@ class Wat(object):
 
 
 if __name__ == '__main__':
-    a = Wat("0 1 * * */2", datetime.now())
+    a = CronSim("0 1 * * */2", datetime.now())
     for i in range(0, 10):
         print("Here's what we got: ", next(a))
