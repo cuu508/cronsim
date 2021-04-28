@@ -43,6 +43,26 @@ class TestParse(unittest.TestCase):
         w = Wat("5/15 * * * *", NOW)
         self.assertEqual(w.minutes, [5, 20, 35, 50])
 
+    def test_it_parses_l(self):
+        w = Wat("* * L * *", NOW)
+        self.assertEqual(w.days, [Wat.LAST])
+
+    def test_it_parses_unrestricted_day_restricted_dow(self):
+        w = Wat("* * * * 1", NOW)
+        self.assertEqual(w.days, [])
+        self.assertEqual(w.weekdays, [1])
+
+    def test_it_parses_restricted_day_unrestricted_dow(self):
+        w = Wat("* * 1 * *", NOW)
+        self.assertEqual(w.days, [1])
+        self.assertEqual(w.weekdays, [])
+
+
+# class TestIterator(unittest.TestCase):
+#     def test_it_handles_l(self):
+#         dt = next(Wat("1 1 L * *", NOW))
+#         self.assertEqual(dt.isoformat(), "2020-01-31T01:01:00")
+
 
 if __name__ == '__main__':
     unittest.main()

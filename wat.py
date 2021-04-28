@@ -31,7 +31,7 @@ def _parse(field, value):
         result = set()
         for item in value.split(","):
             result.update(_parse(field, item))
-        return list(sorted(result))
+        return sorted(result)
 
     if "/" in value:
         term, step = value.split("/")
@@ -48,10 +48,15 @@ def _parse(field, value):
         end = _int(field, end)
         return list(range(start, end + 1))
 
+    if value == "L":
+        return [Wat.LAST]
+
     return [_int(field, value)]
 
 
 class Wat(object):
+    LAST = 1000
+
     def __init__(self, expr, dt):
         self.dt = dt.replace(second=0, microsecond=0)
 
@@ -61,6 +66,14 @@ class Wat(object):
         self.days = _parse(Field.DAY, parts[2])
         self.months = _parse(Field.MONTH, parts[3])
         self.weekdays = _parse(Field.DOW, parts[4])
+
+        # If day is unrestricted but dow is restricted then match only with dow:
+        if self.days == RANGES[Field.DAY] and self.weekdays != RANGES[Field.DOW]:
+            self.days = []
+
+        # If dow is unrestricted but day is restricted then match only with day:
+        if self.weekdays == RANGES[Field.DOW] and self.days != RANGES[Field.DAY]:
+            self.weekdays = []
 
         self.min_m = min(self.minutes)
         self.min_h = min(self.hours)
