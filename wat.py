@@ -1,3 +1,4 @@
+import calendar
 from datetime import datetime, timedelta as td
 from enum import IntEnum
 
@@ -49,7 +50,10 @@ def _parse(field, value):
         return list(range(start, end + 1))
 
     if value == "L":
-        return [Wat.LAST]
+        if field == Field.DAY:
+            return [Wat.LAST]
+        if field == Field.DOW:
+            return [7]
 
     return [_int(field, value)]
 
@@ -111,6 +115,15 @@ class Wat(object):
         self.dt = self.dt.replace(minute=self.min_m)
         return True
 
+    def match_day(self):
+        if self.dt.day in self.days:
+            return True
+        if self.dt.weekday() + 1 in self.weekdays:
+            return True
+        if Wat.LAST in self.days:
+            _, last = calendar.monthrange(self.dt.year, self.dt.month)
+            return self.dt.day == last
+
     def advance_day(self):
         """Roll forward the day component until it satisfies the constraints.
 
@@ -122,15 +135,11 @@ class Wat(object):
 
         """
 
-        if self.dt.day in self.days or self.dt.weekday() + 1 in self.weekdays:
+        if self.match_day():
             return False
 
-        while True:
+        while not self.match_day():
             self.dt += td(days=1)
-            if self.dt.day in self.days:
-                break
-            if self.dt.weekday() + 1 in self.weekdays:
-                break
 
         self.dt = self.dt.replace(minute=self.min_m, hour=self.min_h)
         return True
