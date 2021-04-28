@@ -13,7 +13,7 @@ class TestParse(unittest.TestCase):
         self.assertEqual(w.hours, list(range(0, 24)))
         self.assertEqual(w.days, list(range(1, 32)))
         self.assertEqual(w.months, list(range(1, 13)))
-        self.assertEqual(w.weekdays, list(range(1, 8)))
+        self.assertEqual(w.weekdays, list(range(0, 7)))
 
     def test_it_parses_numbers(self):
         w = Wat("1 * * * *", NOW)
@@ -21,11 +21,11 @@ class TestParse(unittest.TestCase):
 
     def test_it_parses_weekday(self):
         w = Wat("* * * * 1", NOW)
-        self.assertEqual(w.weekdays, [0])
+        self.assertEqual(w.weekdays, [1])
 
     def test_it_handles_0_sunday(self):
         w = Wat("* * * * 0", NOW)
-        self.assertEqual(w.weekdays, [6])
+        self.assertEqual(w.weekdays, [0])
 
     def test_it_parses_list(self):
         w = Wat("1,2,3 * * * *", NOW)
@@ -58,7 +58,7 @@ class TestParse(unittest.TestCase):
     def test_it_parses_unrestricted_day_restricted_dow(self):
         w = Wat("* * * * 1", NOW)
         self.assertEqual(w.days, [])
-        self.assertEqual(w.weekdays, [0])
+        self.assertEqual(w.weekdays, [1])
 
     def test_it_parses_restricted_day_unrestricted_dow(self):
         w = Wat("* * 1 * *", NOW)
@@ -67,19 +67,27 @@ class TestParse(unittest.TestCase):
 
     def test_it_parses_nth_weekday(self):
         w = Wat("* * * * 1#2", NOW)
-        self.assertEqual(w.weekdays, [(0, 2)])
+        self.assertEqual(w.weekdays, [(1, 2)])
 
     def test_it_parses_symbolic_weekday(self):
         w = Wat("* * * * MON", NOW)
-        self.assertEqual(w.weekdays, [0])
+        self.assertEqual(w.weekdays, [1])
 
     def test_it_parses_lowercase_symbolic_weekday(self):
         w = Wat("* * * * mon", NOW)
-        self.assertEqual(w.weekdays, [0])
+        self.assertEqual(w.weekdays, [1])
 
     def test_it_parses_symbolic_month(self):
         w = Wat("* * * JAN *", NOW)
         self.assertEqual(w.months, [1])
+
+    def test_it_parses_weekday_range_from_zero(self):
+        w = Wat("* * * * 0-2", NOW)
+        self.assertEqual(w.weekdays, [0, 1, 2])
+
+    def test_it_starts_weekday_step_from_zero(self):
+        w = Wat("* * * * */2", NOW)
+        self.assertEqual(w.weekdays, [0, 2, 4, 6])
 
 
 class TestValidation(unittest.TestCase):

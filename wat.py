@@ -16,7 +16,7 @@ RANGES = [
     list(range(0, 24)),
     list(range(1, 32)),
     list(range(1, 13)),
-    list(range(1, 8)),
+    list(range(0, 7)),
 ]
 
 SYMBOLIC_DAYS = "MON TUE WED THU FRI SAT SUN".split()
@@ -31,9 +31,6 @@ def _int(field, value):
     if field == Field.DOW:
         if value.upper() in SYMBOLIC_DAYS:
             value = SYMBOLIC_DAYS.index(value.upper()) + 1
-
-        # In cron, Monday=1. In Python, Monday=0.
-        return (int(value) - 1) % 7
 
     return int(value)
 
@@ -145,12 +142,12 @@ class Wat(object):
                 return True
 
         # Does the day of the week match?
-        dow = d.weekday()
-        if dow in self.weekdays:
+        dow = d.weekday() + 1
+        if dow in self.weekdays or dow % 7 in self.weekdays:
             return True
 
-        weekday_idx = (d.day + 6) // 7
-        if (dow, weekday_idx) in self.weekdays:
+        idx = (d.day + 6) // 7
+        if (dow, idx) in self.weekdays or (dow % 7, idx) in self.weekdays:
             return True
 
     def advance_day(self):
@@ -209,6 +206,6 @@ class Wat(object):
 
 
 if __name__ == '__main__':
-    a = Wat("0 0 * * MON-FRI", datetime.now())
+    a = Wat("0 1 * * */2", datetime.now())
     for i in range(0, 10):
         print("Here's what we got: ", next(a))
