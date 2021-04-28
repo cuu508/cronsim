@@ -19,9 +19,19 @@ RANGES = [
     list(range(1, 8)),
 ]
 
+SYMBOLIC_DAYS = "MON TUE WED THU FRI SAT SUN".split()
+SYMBOLIC_MONTHS = "JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC".split()
+
 
 def _int(field, value):
+    if field == Field.MONTH:
+        if value.upper() in SYMBOLIC_MONTHS:
+            value = SYMBOLIC_MONTHS.index(value.upper()) + 1
+
     if field == Field.DOW:
+        if value.upper() in SYMBOLIC_DAYS:
+            value = SYMBOLIC_DAYS.index(value.upper()) + 1
+
         # In cron, Monday=1. In Python, Monday=0.
         return (int(value) - 1) % 7
 
@@ -63,6 +73,10 @@ def _parse(field, value):
     return [_int(field, value)]
 
 
+class WatError(Exception):
+    pass
+
+
 class Wat(object):
     LAST = 1000
 
@@ -70,6 +84,9 @@ class Wat(object):
         self.dt = dt.replace(second=0, microsecond=0)
 
         parts = expr.split()
+        if len(parts) != 5:
+            raise WatError("Bad expression, wrong number of fields")
+
         self.minutes = _parse(Field.MINUTE, parts[0])
         self.hours = _parse(Field.HOUR, parts[1])
         self.days = _parse(Field.DAY, parts[2])
@@ -83,7 +100,6 @@ class Wat(object):
         # If dow is unrestricted but day is restricted then match only with day:
         if self.weekdays == RANGES[Field.DOW] and self.days != RANGES[Field.DAY]:
             self.weekdays = []
-
 
     def advance_minute(self):
         """Roll forward the minute component until it satisfies the constraints.
@@ -193,6 +209,6 @@ class Wat(object):
 
 
 if __name__ == '__main__':
-    a = Wat("0 0 * * 1", datetime.now())
+    a = Wat("0 0 * * MON-FRI", datetime.now())
     for i in range(0, 10):
         print("Here's what we got: ", next(a))

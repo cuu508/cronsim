@@ -1,7 +1,7 @@
 from datetime import datetime
 import unittest
 
-from wat import Wat
+from wat import Wat, WatError
 
 NOW = datetime(2020, 1, 1)
 
@@ -68,6 +68,24 @@ class TestParse(unittest.TestCase):
     def test_it_parses_nth_weekday(self):
         w = Wat("* * * * 1#2", NOW)
         self.assertEqual(w.weekdays, [(0, 2)])
+
+    def test_it_parses_symbolic_weekday(self):
+        w = Wat("* * * * MON", NOW)
+        self.assertEqual(w.weekdays, [0])
+
+    def test_it_parses_lowercase_symbolic_weekday(self):
+        w = Wat("* * * * mon", NOW)
+        self.assertEqual(w.weekdays, [0])
+
+    def test_it_parses_symbolic_month(self):
+        w = Wat("* * * JAN *", NOW)
+        self.assertEqual(w.months, [1])
+
+
+class TestValidation(unittest.TestCase):
+    def test_it_rejects_six_components(self):
+        with self.assertRaises(WatError):
+            Wat("* * * * * *", NOW)
 
 
 class TestIterator(unittest.TestCase):
