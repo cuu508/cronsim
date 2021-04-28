@@ -1,0 +1,48 @@
+from datetime import datetime
+import unittest
+
+from wat import Wat
+
+NOW = datetime(2020, 1, 1)
+
+class TestParse(unittest.TestCase):
+
+    def test_it_parses_stars(self):
+        w = Wat("* * * * *", NOW)
+        self.assertEqual(w.minutes, list(range(0, 60)))
+        self.assertEqual(w.hours, list(range(0, 24)))
+        self.assertEqual(w.days, list(range(1, 32)))
+        self.assertEqual(w.months, list(range(1, 13)))
+        self.assertEqual(w.weekdays, list(range(1, 8)))
+
+    def test_it_parses_numbers(self):
+        w = Wat("1 * * * *", NOW)
+        self.assertEqual(w.minutes, [1])
+
+    def test_it_parses_list(self):
+        w = Wat("1,2,3 * * * *", NOW)
+        self.assertEqual(w.minutes, [1, 2, 3])
+
+    def test_it_parses_interval(self):
+        w = Wat("1-3 * * * *", NOW)
+        self.assertEqual(w.minutes, [1, 2, 3])
+
+    def test_it_parses_two_intervals(self):
+        w = Wat("1-3,7-9 * * * *", NOW)
+        self.assertEqual(w.minutes, [1, 2, 3, 7, 8, 9])
+
+    def test_it_parses_step(self):
+        w = Wat("*/15 * * * *", NOW)
+        self.assertEqual(w.minutes, [0, 15, 30, 45])
+
+    def test_it_parses_interval_with_step(self):
+        w = Wat("0-10/2 * * * *", NOW)
+        self.assertEqual(w.minutes, [0, 2, 4, 6, 8, 10])
+
+    def test_it_parses_start_with_step(self):
+        w = Wat("5/15 * * * *", NOW)
+        self.assertEqual(w.minutes, [5, 20, 35, 50])
+
+
+if __name__ == '__main__':
+    unittest.main()
