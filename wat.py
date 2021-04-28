@@ -1,5 +1,5 @@
 import calendar
-from datetime import datetime, timedelta as td
+from datetime import datetime, timedelta as td, time
 from enum import IntEnum
 
 
@@ -21,6 +21,10 @@ RANGES = [
 
 
 def _int(field, value):
+    if field == Field.DOW:
+        # In cron, Monday=1. In Python, Monday=0.
+        return (int(value) - 1) % 7
+
     return int(value)
 
 
@@ -80,8 +84,6 @@ class Wat(object):
         if self.weekdays == RANGES[Field.DOW] and self.days != RANGES[Field.DAY]:
             self.weekdays = []
 
-        self.min_m = min(self.minutes)
-        self.min_h = min(self.hours)
 
     def advance_minute(self):
         """Roll forward the minute component until it satisfies the constraints.
@@ -113,33 +115,26 @@ class Wat(object):
         delta = min((v - self.dt.hour) % 24 for v in self.hours)
         self.dt += td(hours=delta)
 
-        self.dt = self.dt.replace(minute=self.min_m)
+        self.dt = self.dt.replace(minute=min(self.minutes))
         return True
 
-    def get_weekday_index(self):
-        needle, count = self.dt.date(), 0
-        while needle.month == self.dt.month:
-            needle = needle - td(days=7)
-            count += 1
-
-        return count
-
-    def match_day(self):
+    def match_day(self, d):
         # Does the day of the month match?
-        if self.dt.day in self.days:
+        if d.day in self.days:
             return True
 
         if Wat.LAST in self.days:
-            _, last = calendar.monthrange(self.dt.year, self.dt.month)
-            if self.dt.day == last:
+            _, last = calendar.monthrange(d.year, d.month)
+            if d.day == last:
                 return True
 
         # Does the day of the week match?
-        dow = self.dt.weekday() + 1
+        dow = d.weekday()
         if dow in self.weekdays:
             return True
 
-        if (dow, self.get_weekday_index()) in self.weekdays:
+        weekday_idx = (d.day + 6) // 7
+        if (dow, weekday_idx) in self.weekdays:
             return True
 
     def advance_day(self):
@@ -153,13 +148,14 @@ class Wat(object):
 
         """
 
-        if self.match_day():
+        needle = self.dt.date()
+        if self.match_day(needle):
             return False
 
-        while not self.match_day():
-            self.dt += td(days=1)
+        while not self.match_day(needle):
+            needle += td(days=1)
 
-        self.dt = self.dt.replace(minute=self.min_m, hour=self.min_h)
+        self.dt = datetime.combine(needle, time(), self.dt.tzinfo)
         return True
 
     def advance_month(self):
@@ -168,10 +164,11 @@ class Wat(object):
         if self.dt.month in self.months:
             return
 
-        while self.dt.month not in self.months:
-            self.dt += td(days=1)
+        needle = self.dt.date()
+        while needle.month not in self.months:
+            needle += td(days=1)
 
-        self.dt = self.dt.replace(hour=self.min_h, minute=self.min_m)
+        self.dt = datetime.combine(needle, time(), self.dt.tzinfo)
 
     def __iter__(self):
         return self
