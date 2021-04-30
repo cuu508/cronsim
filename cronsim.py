@@ -9,6 +9,7 @@ class Field(IntEnum):
     DAY = 2
     MONTH = 3
     DOW = 4
+    SECOND = 5
 
 
 RANGES = [
@@ -17,6 +18,7 @@ RANGES = [
     list(range(1, 32)),
     list(range(1, 13)),
     list(range(0, 7)),
+    list(range(0, 60)),
 ]
 
 SYMBOLIC_DAYS = "SUN MON TUE WED THU FRI SAT".split()
@@ -57,7 +59,7 @@ def _parse(field, value):
             end = max(RANGES[field])
             items = list(range(start, end + 1))
 
-        return items[::int(step)]
+        return items[:: int(step)]
 
     if "-" in value:
         start, end = value.split("-")
@@ -82,7 +84,10 @@ class CronSim(object):
         self.dt = dt.replace(second=0, microsecond=0)
 
         parts = expr.split()
-        if len(parts) != 5:
+        if len(parts) == 5:
+            parts.append("0")
+
+        if len(parts) != 6:
             raise CronSimError("Bad expression, wrong number of fields")
 
         self.minutes = _parse(Field.MINUTE, parts[0])
@@ -90,6 +95,7 @@ class CronSim(object):
         self.days = _parse(Field.DAY, parts[2])
         self.months = _parse(Field.MONTH, parts[3])
         self.weekdays = _parse(Field.DOW, parts[4])
+        self.seconds = _parse(Field.SECOND, parts[5])
 
         # If day is unrestricted but dow is restricted then match only with dow:
         if self.days == RANGES[Field.DAY] and self.weekdays != RANGES[Field.DOW]:
@@ -98,6 +104,22 @@ class CronSim(object):
         # If dow is unrestricted but day is restricted then match only with day:
         if self.weekdays == RANGES[Field.DOW] and self.days != RANGES[Field.DAY]:
             self.weekdays = []
+
+    def advance_second(self):
+        """Roll forward the second component until it satisfies the constraints.
+
+        Return False if the second meets contraints without modification.
+        Return True if self.dt was rolled forward.
+
+        """
+
+        if self.dt.second in self.seconds:
+            return False
+
+        delta = min((v - self.dt.second) % 60 for v in self.seconds)
+        self.dt += td(seconds=delta)
+
+        return True
 
     def advance_minute(self):
         """Roll forward the minute component until it satisfies the constraints.
@@ -113,6 +135,7 @@ class CronSim(object):
         delta = min((v - self.dt.minute) % 60 for v in self.minutes)
         self.dt += td(minutes=delta)
 
+        self.dt = self.dt.replace(second=min(self.seconds))
         return True
 
     def advance_hour(self):
@@ -129,7 +152,7 @@ class CronSim(object):
         delta = min((v - self.dt.hour) % 24 for v in self.hours)
         self.dt += td(hours=delta)
 
-        self.dt = self.dt.replace(minute=min(self.minutes))
+        self.dt = self.dt.replace(minute=min(self.minutes), second=min(self.seconds))
         return True
 
     def match_day(self, d):
@@ -188,7 +211,7 @@ class CronSim(object):
         return self
 
     def __next__(self):
-        self.dt += td(minutes=1)
+        self.dt += td(seconds=1)
 
         while True:
             self.advance_month()
@@ -202,11 +225,14 @@ class CronSim(object):
             if self.advance_minute():
                 continue
 
+            if self.advance_second():
+                continue
+
             # If all constraints are satisfied then we have the result:
             return self.dt
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # a = CronSim("0 1 * * */2", datetime.now())
     # for i in range(0, 10):
     #     print("Here's what we got: ", next(a))

@@ -5,10 +5,19 @@ from cronsim import CronSim, CronSimError
 
 NOW = datetime(2020, 1, 1)
 
-class TestParse(unittest.TestCase):
 
+class TestParse(unittest.TestCase):
     def test_it_parses_stars(self):
         w = CronSim("* * * * *", NOW)
+        self.assertEqual(w.minutes, list(range(0, 60)))
+        self.assertEqual(w.hours, list(range(0, 24)))
+        self.assertEqual(w.days, list(range(1, 32)))
+        self.assertEqual(w.months, list(range(1, 13)))
+        self.assertEqual(w.weekdays, list(range(0, 7)))
+
+    def test_it_parses_six_components(self):
+        w = CronSim("* * * * * *", NOW)
+        self.assertEqual(w.seconds, list(range(0, 60)))
         self.assertEqual(w.minutes, list(range(0, 60)))
         self.assertEqual(w.hours, list(range(0, 24)))
         self.assertEqual(w.days, list(range(1, 32)))
@@ -98,12 +107,6 @@ class TestParse(unittest.TestCase):
         self.assertEqual(w.weekdays, [0, 2, 4, 6])
 
 
-class TestValidation(unittest.TestCase):
-    def test_it_rejects_six_components(self):
-        with self.assertRaises(CronSimError):
-            CronSim("* * * * * *", NOW)
-
-
 class TestIterator(unittest.TestCase):
     def test_it_handles_l(self):
         dt = next(CronSim("1 1 L * *", NOW))
@@ -114,5 +117,5 @@ class TestIterator(unittest.TestCase):
         self.assertEqual(dt.isoformat(), "2020-01-13T01:01:00")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
