@@ -1,4 +1,5 @@
 from datetime import datetime
+from itertools import product
 import unittest
 
 from cronsim import CronSim, CronSimError
@@ -105,6 +106,42 @@ class TestParse(unittest.TestCase):
     def test_it_starts_weekday_step_from_zero(self):
         w = CronSim("* * * * */2", NOW)
         self.assertEqual(w.weekdays, [0, 2, 4, 6])
+
+
+class TestExceptions(unittest.TestCase):
+    def test_it_rejects_4_components(self):
+        with self.assertRaises(CronSimError):
+            CronSim("* * * *", NOW)
+
+    def test_it_rejects_bad_values(self):
+        patterns = (
+            "%s * * * *",
+            "* %s * * *",
+            "* * %s * *",
+            "* * * %s * ",
+            "* * * * %s",
+            "* * * * * %s",
+            "1-%s * * * *",
+            "%s-60 * * * *",
+            "* * * %s-DEC *",
+            "* * * JAN-%s *",
+            "* * * * %s-SUN",
+            "* * * * MON-%s",
+        )
+
+        bad_values = ("-1", "61", "ABC", "2/", "/2", "2#", "#2")
+
+        for pattern, s in product(patterns, bad_values):
+            with self.assertRaises(CronSimError):
+                CronSim(pattern % s, NOW)
+
+    def test_it_rejects_lopsided_range(self):
+        with self.assertRaises(CronSimError):
+            CronSim("* * 5-1 * *", NOW)
+
+    def test_it_rejects_underscores(self):
+        with self.assertRaises(CronSimError):
+            CronSim("1-1_0 * * * *", NOW)
 
 
 class TestIterator(unittest.TestCase):

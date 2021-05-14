@@ -25,16 +25,25 @@ SYMBOLIC_DAYS = "SUN MON TUE WED THU FRI SAT".split()
 SYMBOLIC_MONTHS = "JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC".split()
 
 
-def _int(field, value):
-    if field == Field.MONTH:
-        if value.upper() in SYMBOLIC_MONTHS:
-            value = SYMBOLIC_MONTHS.index(value.upper()) + 1
+class CronSimError(Exception):
+    pass
 
-    if field == Field.DOW:
-        if value.upper() in SYMBOLIC_DAYS:
-            value = SYMBOLIC_DAYS.index(value.upper())
 
-    return int(value)
+def _int(value, field=None):
+    if field == Field.MONTH and value.upper() in SYMBOLIC_MONTHS:
+        return SYMBOLIC_MONTHS.index(value.upper()) + 1
+
+    if field == Field.DOW and value.upper() in SYMBOLIC_DAYS:
+        return SYMBOLIC_DAYS.index(value.upper())
+
+    if not value.isdigit() or len(value) > 2:
+        raise CronSimError("Bad value: %s" % value)
+
+    v = int(value)
+    if v > 60:
+        raise CronSimError("Bad value: %s" % value)
+
+    return v
 
 
 def _parse(field, value):
@@ -49,32 +58,33 @@ def _parse(field, value):
 
     if "#" in value and field == Field.DOW:
         term, nth = value.split("#")
-        return [(_int(field, term), int(nth))]
+        nth = _int(nth)
+        return [(_int(term, field), nth)]
 
     if "/" in value:
         term, step = value.split("/")
+        step = _int(step)
         items = _parse(field, term)
         if len(items) == 1:
             start = items[0]
             end = max(RANGES[field])
             items = list(range(start, end + 1))
-
-        return items[:: int(step)]
+        return items[::step]
 
     if "-" in value:
-        start, end = value.split("-")
-        start = _int(field, start)
-        end = _int(field, end)
+        start, end = value.split("-", maxsplit=1)
+        start = _int(start, field)
+        end = _int(end, field)
+
+        if end < start:
+            raise CronSimError("Bad value: %s" % value)
+
         return list(range(start, end + 1))
 
     if field == Field.DAY and value in ("L", "l"):
         return [CronSim.LAST]
 
-    return [_int(field, value)]
-
-
-class CronSimError(Exception):
-    pass
+    return [_int(value, field)]
 
 
 class CronSim(object):
