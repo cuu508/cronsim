@@ -13,12 +13,12 @@ class Field(IntEnum):
 
 
 RANGES = [
-    list(range(0, 60)),
-    list(range(0, 24)),
-    list(range(1, 32)),
-    list(range(1, 13)),
-    list(range(0, 7)),
-    list(range(0, 60)),
+    frozenset(range(0, 60)),
+    frozenset(range(0, 24)),
+    frozenset(range(1, 32)),
+    frozenset(range(1, 13)),
+    frozenset(range(0, 7)),
+    frozenset(range(0, 60)),
 ]
 
 SYMBOLIC_DAYS = "SUN MON TUE WED THU FRI SAT".split()
@@ -54,12 +54,12 @@ def _parse(field, value):
         result = set()
         for item in value.split(","):
             result.update(_parse(field, item))
-        return sorted(result)
+        return result
 
     if "#" in value and field == Field.DOW:
         term, nth = value.split("#", maxsplit=1)
         nth = _int(nth)
-        return [(_int(term, field), nth)]
+        return {(_int(term, field), nth)}
 
     if "/" in value:
         term, step = value.split("/", maxsplit=1)
@@ -67,7 +67,7 @@ def _parse(field, value):
         if step == 0:
             raise CronSimError("Step cannot be zero")
 
-        items = _parse(field, term)
+        items = sorted(_parse(field, term))
         if items == [CronSim.LAST]:
             return items
 
@@ -75,7 +75,7 @@ def _parse(field, value):
             start = items[0]
             end = max(RANGES[field])
             items = list(range(start, end + 1))
-        return items[::step]
+        return set(items[::step])
 
     if "-" in value:
         start, end = value.split("-", maxsplit=1)
@@ -85,12 +85,12 @@ def _parse(field, value):
         if end < start:
             raise CronSimError("Range end cannot be smaller than start")
 
-        return list(range(start, end + 1))
+        return set(range(start, end + 1))
 
     if field == Field.DAY and value in ("L", "l"):
-        return [CronSim.LAST]
+        return {CronSim.LAST}
 
-    return [_int(value, field)]
+    return {_int(value, field)}
 
 
 class CronSim(object):
@@ -115,11 +115,11 @@ class CronSim(object):
 
         # If day is unrestricted but dow is restricted then match only with dow:
         if self.days == RANGES[Field.DAY] and self.weekdays != RANGES[Field.DOW]:
-            self.days = []
+            self.days = set()
 
         # If dow is unrestricted but day is restricted then match only with day:
         if self.weekdays == RANGES[Field.DOW] and self.days != RANGES[Field.DAY]:
-            self.weekdays = []
+            self.weekdays = set()
 
     def advance_second(self):
         """Roll forward the second component until it satisfies the constraints.
