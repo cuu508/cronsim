@@ -212,6 +212,10 @@ class CronSim(object):
 
         while not self.match_day(needle):
             needle += td(days=1)
+            if needle.day == 1:
+                # We're in a different month now, break out to re-check month
+                # This significantly speeds up the "0 0 * 2 MON#5" case
+                break
 
         self.dt = datetime.combine(needle, time(), self.dt.tzinfo)
         return True
@@ -261,16 +265,11 @@ if __name__ == "__main__":
     # print("M:   ", a.months)
     # print("DOW: ", a.weekdays)
 
-    # a = CronSim("0 0 * 2 1#5", datetime.now())
-    # for i in range(0, 100):
-    #     next(a)
-    # print(next(a))
-
     import timeit
 
     code = """
-a = CronSim('0 0 * * FRI#1', datetime.now())
-for i in range(0, 10000):
+a = CronSim('0 0 * 2 MON#5', datetime.now())
+for i in range(0, 100):
     next(a)
 print(next(a))
 """
@@ -279,6 +278,6 @@ print(next(a))
         timeit.timeit(
             code,
             setup="from cronsim import CronSim;from datetime import datetime",
-            number=1,
+            number=10,
         )
     )
