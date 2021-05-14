@@ -116,7 +116,7 @@ class TestParse(unittest.TestCase):
         self.assertEqual(w.weekdays, {1, 2, (3, 1)})
 
 
-class TestExceptions(unittest.TestCase):
+class TestValidation(unittest.TestCase):
     def test_it_rejects_4_components(self):
         with self.assertRaises(CronSimError):
             CronSim("* * * *", NOW)
@@ -154,6 +154,10 @@ class TestExceptions(unittest.TestCase):
     def test_it_rejects_zero_step(self):
         with self.assertRaises(CronSimError):
             CronSim("*/0 * * * *", NOW)
+
+    def test_it_rejects_zero_nth(self):
+        with self.assertRaises(CronSimError):
+            CronSim("* * * * 1#0", NOW)
 
 
 class TestIterator(unittest.TestCase):

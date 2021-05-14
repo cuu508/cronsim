@@ -19,11 +19,15 @@ class CronSimError(Exception):
     pass
 
 
-def _int(value, field=None):
+def _int(value, min_value=0):
     if not value.isdigit() or len(value) > 2:
         raise CronSimError("Bad value: %s" % value)
 
-    return int(value)
+    v = int(value)
+    if v < min_value:
+        raise CronSimError("Bad value: %s" % value)
+
+    return v
 
 
 class Field(IntEnum):
@@ -59,14 +63,13 @@ class Field(IntEnum):
 
         if "#" in s and self == Field.DOW:
             term, nth = s.split("#", maxsplit=1)
-            return {(self.int(term), _int(nth))}
+            nth = _int(nth, min_value=1)
+            spec = (self.int(term), nth)
+            return {spec}
 
         if "/" in s:
             term, step = s.split("/", maxsplit=1)
-            step = _int(step)
-            if step == 0:
-                raise CronSimError("Step cannot be zero")
-
+            step = _int(step, min_value=1)
             items = sorted(self.parse(term))
             if items == [CronSim.LAST]:
                 return items
@@ -249,7 +252,7 @@ class CronSim(object):
 
 
 if __name__ == "__main__":
-    a = CronSim("1,0 2 L/2 * *", datetime.now())
+    a = CronSim("* * * * 1#0", datetime.now())
     print("M:   ", a.minutes)
     print("H:   ", a.hours)
     print("D:   ", a.days)
