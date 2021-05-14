@@ -39,11 +39,11 @@ def _int(value, field=None):
     if not value.isdigit() or len(value) > 2:
         raise CronSimError("Bad value: %s" % value)
 
-    v = int(value)
-    if v > 60:
+    value_int = int(value)
+    if field is not None and value_int not in RANGES[field]:
         raise CronSimError("Bad value: %s" % value)
 
-    return v
+    return value_int
 
 
 def _parse(field, value):
@@ -57,14 +57,20 @@ def _parse(field, value):
         return sorted(result)
 
     if "#" in value and field == Field.DOW:
-        term, nth = value.split("#")
+        term, nth = value.split("#", maxsplit=1)
         nth = _int(nth)
         return [(_int(term, field), nth)]
 
     if "/" in value:
-        term, step = value.split("/")
+        term, step = value.split("/", maxsplit=1)
         step = _int(step)
+        if step == 0:
+            raise CronSimError("Step cannot be zero")
+
         items = _parse(field, term)
+        if items == [CronSim.LAST]:
+            return items
+
         if len(items) == 1:
             start = items[0]
             end = max(RANGES[field])
@@ -77,7 +83,7 @@ def _parse(field, value):
         end = _int(end, field)
 
         if end < start:
-            raise CronSimError("Bad value: %s" % value)
+            raise CronSimError("Range end cannot be smaller than start")
 
         return list(range(start, end + 1))
 
@@ -98,7 +104,7 @@ class CronSim(object):
             parts.append("0")
 
         if len(parts) != 6:
-            raise CronSimError("Bad expression, wrong number of fields")
+            raise CronSimError("Wrong number of fields")
 
         self.minutes = _parse(Field.MINUTE, parts[0])
         self.hours = _parse(Field.HOUR, parts[1])
@@ -243,8 +249,14 @@ class CronSim(object):
 
 
 if __name__ == "__main__":
-    # a = CronSim("0 1 * * */2", datetime.now())
+    a = CronSim("1,0 2 L/2 * *", datetime.now())
+    print("M:   ", a.minutes)
+    print("H:   ", a.hours)
+    print("D:   ", a.days)
+    print("M:   ", a.months)
+    print("DOW: ", a.weekdays)
+
     # for i in range(0, 10):
     #     print("Here's what we got: ", next(a))
 
-    print(_parse(Field.DAY, "0/10"))
+    # print(_parse(Field.DAY, "0/10"))

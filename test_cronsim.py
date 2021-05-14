@@ -107,6 +107,10 @@ class TestParse(unittest.TestCase):
         w = CronSim("* * * * */2", NOW)
         self.assertEqual(w.weekdays, [0, 2, 4, 6])
 
+    def test_it_accepts_l_with_step(self):
+        w = CronSim("* * L/2 * *", NOW)
+        self.assertEqual(w.days, [CronSim.LAST])
+
 
 class TestExceptions(unittest.TestCase):
     def test_it_rejects_4_components(self):
@@ -129,7 +133,7 @@ class TestExceptions(unittest.TestCase):
             "* * * * MON-%s",
         )
 
-        bad_values = ("-1", "61", "ABC", "2/", "/2", "2#", "#2")
+        bad_values = ("-1", "61", "ABC", "2/", "/2", "2#", "#2", "1##1", "1//2")
 
         for pattern, s in product(patterns, bad_values):
             with self.assertRaises(CronSimError):
@@ -142,6 +146,10 @@ class TestExceptions(unittest.TestCase):
     def test_it_rejects_underscores(self):
         with self.assertRaises(CronSimError):
             CronSim("1-1_0 * * * *", NOW)
+
+    def test_it_rejects_zero_step(self):
+        with self.assertRaises(CronSimError):
+            CronSim("*/0 * * * *", NOW)
 
 
 class TestIterator(unittest.TestCase):
