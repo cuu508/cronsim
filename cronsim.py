@@ -7,7 +7,7 @@ RANGES = [
     frozenset(range(0, 24)),
     frozenset(range(1, 32)),
     frozenset(range(1, 13)),
-    frozenset(range(0, 7)),
+    frozenset(range(0, 8)),
     frozenset(range(0, 60)),
 ]
 
@@ -19,15 +19,11 @@ class CronSimError(Exception):
     pass
 
 
-def _int(value, min_value=0):
-    if not value.isdigit() or len(value) > 2:
+def _int(value):
+    if not value.isdigit():
         raise CronSimError("Bad value: %s" % value)
 
-    v = int(value)
-    if v < min_value:
-        raise CronSimError("Bad value: %s" % value)
-
-    return v
+    return int(value)
 
 
 class Field(IntEnum):
@@ -63,13 +59,19 @@ class Field(IntEnum):
 
         if "#" in s and self == Field.DOW:
             term, nth = s.split("#", maxsplit=1)
-            nth = _int(nth, min_value=1)
+            nth = _int(nth)
+            if nth < 1 or nth > 5:
+                raise CronSimError("Bad value: %s" % s)
+
             spec = (self.int(term), nth)
             return {spec}
 
         if "/" in s:
             term, step = s.split("/", maxsplit=1)
-            step = _int(step, min_value=1)
+            step = _int(step)
+            if step == 0:
+                raise CronSimError("Step cannot be zero")
+
             items = sorted(self.parse(term))
             if items == [CronSim.LAST]:
                 return items
@@ -222,7 +224,7 @@ class CronSim(object):
 
         needle = self.dt.date()
         while needle.month not in self.months:
-            needle += td(days=1)
+            needle = (needle.replace(day=1) + td(days=32)).replace(day=1)
 
         self.dt = datetime.combine(needle, time(), self.dt.tzinfo)
 
@@ -252,14 +254,31 @@ class CronSim(object):
 
 
 if __name__ == "__main__":
-    a = CronSim("* * * * 1#0", datetime.now())
-    print("M:   ", a.minutes)
-    print("H:   ", a.hours)
-    print("D:   ", a.days)
-    print("M:   ", a.months)
-    print("DOW: ", a.weekdays)
+    # a = CronSim("0 0 * 2 1#5", datetime.now())
+    # print("M:   ", a.minutes)
+    # print("H:   ", a.hours)
+    # print("D:   ", a.days)
+    # print("M:   ", a.months)
+    # print("DOW: ", a.weekdays)
 
-    # for i in range(0, 10):
-    #     print("Here's what we got: ", next(a))
+    # a = CronSim("0 0 * 2 1#5", datetime.now())
+    # for i in range(0, 100):
+    #     next(a)
+    # print(next(a))
 
-    # print(_parse(Field.DAY, "0/10"))
+    import timeit
+
+    code = """
+a = CronSim('0 0 * * FRI#1', datetime.now())
+for i in range(0, 10000):
+    next(a)
+print(next(a))
+"""
+
+    print(
+        timeit.timeit(
+            code,
+            setup="from cronsim import CronSim;from datetime import datetime",
+            number=1,
+        )
+    )

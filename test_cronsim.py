@@ -14,7 +14,7 @@ class TestParse(unittest.TestCase):
         self.assertEqual(w.hours, set(range(0, 24)))
         self.assertEqual(w.days, set(range(1, 32)))
         self.assertEqual(w.months, set(range(1, 13)))
-        self.assertEqual(w.weekdays, set(range(0, 7)))
+        self.assertEqual(w.weekdays, set(range(0, 8)))
 
     def test_it_parses_six_components(self):
         w = CronSim("* * * * * *", NOW)
@@ -23,7 +23,7 @@ class TestParse(unittest.TestCase):
         self.assertEqual(w.hours, set(range(0, 24)))
         self.assertEqual(w.days, set(range(1, 32)))
         self.assertEqual(w.months, set(range(1, 13)))
-        self.assertEqual(w.weekdays, set(range(0, 7)))
+        self.assertEqual(w.weekdays, set(range(0, 8)))
 
     def test_it_parses_numbers(self):
         w = CronSim("1 * * * *", NOW)
@@ -115,6 +115,10 @@ class TestParse(unittest.TestCase):
         w = CronSim("* * * * 1,2,3#1", NOW)
         self.assertEqual(w.weekdays, {1, 2, (3, 1)})
 
+    def test_it_accepts_weekday_7(self):
+        w = CronSim("* * * * 7", NOW)
+        self.assertEqual(w.weekdays, {7})
+
 
 class TestValidation(unittest.TestCase):
     def test_it_rejects_4_components(self):
@@ -158,6 +162,10 @@ class TestValidation(unittest.TestCase):
     def test_it_rejects_zero_nth(self):
         with self.assertRaises(CronSimError):
             CronSim("* * * * 1#0", NOW)
+
+    def test_it_rejects_big_nth(self):
+        with self.assertRaises(CronSimError):
+            CronSim("* * * * 1#6", NOW)
 
 
 class TestIterator(unittest.TestCase):
