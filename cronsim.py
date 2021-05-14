@@ -2,16 +2,6 @@ import calendar
 from datetime import datetime, timedelta as td, time
 from enum import IntEnum
 
-
-class Field(IntEnum):
-    MINUTE = 0
-    HOUR = 1
-    DAY = 2
-    MONTH = 3
-    DOW = 4
-    SECOND = 5
-
-
 RANGES = [
     frozenset(range(0, 60)),
     frozenset(range(0, 24)),
@@ -30,67 +20,77 @@ class CronSimError(Exception):
 
 
 def _int(value, field=None):
-    if field == Field.MONTH and value.upper() in SYMBOLIC_MONTHS:
-        return SYMBOLIC_MONTHS.index(value.upper()) + 1
-
-    if field == Field.DOW and value.upper() in SYMBOLIC_DAYS:
-        return SYMBOLIC_DAYS.index(value.upper())
-
     if not value.isdigit() or len(value) > 2:
         raise CronSimError("Bad value: %s" % value)
 
-    value_int = int(value)
-    if field is not None and value_int not in RANGES[field]:
-        raise CronSimError("Bad value: %s" % value)
-
-    return value_int
+    return int(value)
 
 
-def _parse(field, value):
-    if value == "*":
-        return RANGES[field]
+class Field(IntEnum):
+    MINUTE = 0
+    HOUR = 1
+    DAY = 2
+    MONTH = 3
+    DOW = 4
+    SECOND = 5
 
-    if "," in value:
-        result = set()
-        for item in value.split(","):
-            result.update(_parse(field, item))
-        return result
+    def int(self, s):
+        if self == Field.MONTH and s.upper() in SYMBOLIC_MONTHS:
+            return SYMBOLIC_MONTHS.index(s.upper()) + 1
 
-    if "#" in value and field == Field.DOW:
-        term, nth = value.split("#", maxsplit=1)
-        nth = _int(nth)
-        return {(_int(term, field), nth)}
+        if self == Field.DOW and s.upper() in SYMBOLIC_DAYS:
+            return SYMBOLIC_DAYS.index(s.upper())
 
-    if "/" in value:
-        term, step = value.split("/", maxsplit=1)
-        step = _int(step)
-        if step == 0:
-            raise CronSimError("Step cannot be zero")
+        v = _int(s)
+        if v not in RANGES[self]:
+            raise CronSimError("Bad value: %s" % s)
 
-        items = sorted(_parse(field, term))
-        if items == [CronSim.LAST]:
-            return items
+        return v
 
-        if len(items) == 1:
-            start = items[0]
-            end = max(RANGES[field])
-            items = list(range(start, end + 1))
-        return set(items[::step])
+    def parse(self, s):
+        if s == "*":
+            return RANGES[self]
 
-    if "-" in value:
-        start, end = value.split("-", maxsplit=1)
-        start = _int(start, field)
-        end = _int(end, field)
+        if "," in s:
+            result = set()
+            for term in s.split(","):
+                result.update(self.parse(term))
+            return result
 
-        if end < start:
-            raise CronSimError("Range end cannot be smaller than start")
+        if "#" in s and self == Field.DOW:
+            term, nth = s.split("#", maxsplit=1)
+            return {(self.int(term), _int(nth))}
 
-        return set(range(start, end + 1))
+        if "/" in s:
+            term, step = s.split("/", maxsplit=1)
+            step = _int(step)
+            if step == 0:
+                raise CronSimError("Step cannot be zero")
 
-    if field == Field.DAY and value in ("L", "l"):
-        return {CronSim.LAST}
+            items = sorted(self.parse(term))
+            if items == [CronSim.LAST]:
+                return items
 
-    return {_int(value, field)}
+            if len(items) == 1:
+                start = items[0]
+                end = max(RANGES[self])
+                items = range(start, end + 1)
+            return set(items[::step])
+
+        if "-" in s:
+            start, end = s.split("-", maxsplit=1)
+            start = self.int(start)
+            end = self.int(end)
+
+            if end < start:
+                raise CronSimError("Range end cannot be smaller than start")
+
+            return set(range(start, end + 1))
+
+        if self == Field.DAY and s in ("L", "l"):
+            return {CronSim.LAST}
+
+        return {self.int(s)}
 
 
 class CronSim(object):
@@ -106,12 +106,12 @@ class CronSim(object):
         if len(parts) != 6:
             raise CronSimError("Wrong number of fields")
 
-        self.minutes = _parse(Field.MINUTE, parts[0])
-        self.hours = _parse(Field.HOUR, parts[1])
-        self.days = _parse(Field.DAY, parts[2])
-        self.months = _parse(Field.MONTH, parts[3])
-        self.weekdays = _parse(Field.DOW, parts[4])
-        self.seconds = _parse(Field.SECOND, parts[5])
+        self.minutes = Field.MINUTE.parse(parts[0])
+        self.hours = Field.HOUR.parse(parts[1])
+        self.days = Field.DAY.parse(parts[2])
+        self.months = Field.MONTH.parse(parts[3])
+        self.weekdays = Field.DOW.parse(parts[4])
+        self.seconds = Field.SECOND.parse(parts[5])
 
         # If day is unrestricted but dow is restricted then match only with dow:
         if self.days == RANGES[Field.DAY] and self.weekdays != RANGES[Field.DOW]:
