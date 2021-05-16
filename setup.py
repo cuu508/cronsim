@@ -1,19 +1,17 @@
 # coding: utf-8
 
-"""
-Cron expression parser and evaluator.
-"""
 from setuptools import find_packages, setup
 
 setup(
     name="cronsim",
-    version="0.1.1",
+    version="0.1.2",
     url="https://github.com/cuu508/cronsim",
     license="BSD",
     author="Pēteris Caune",
     author_email="cuu508@gmail.com",
     description="Cron expression parser and evaluator",
-    long_description=__doc__,
+    long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
     packages=find_packages(exclude=["tests"]),
     include_package_data=True,
     platforms="any",
