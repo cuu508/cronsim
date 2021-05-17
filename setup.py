@@ -12,7 +12,7 @@ setup(
     description="Cron expression parser and evaluator",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    packages=find_packages(exclude=["tests"]),
+    packages=find_packages(),
     include_package_data=True,
     platforms="any",
     classifiers=[

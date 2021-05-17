@@ -43,7 +43,7 @@ they don't conflict or interfere with the standard syntax.
 
 | Feature                  | Debian | croniter | cronsim |
 | ------------------------ | :----: | :------: | :-----: |
-| Seconds in the 6th field | No     | Yes      | Yes     |
+| Seconds in the 6th field | No     | Yes      | No      |
 | Special character "L"    | No     | Yes      | Yes     |
 | N-th weekday of month    | Yes    | Yes      | Yes     |
 
