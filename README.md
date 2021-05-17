@@ -32,12 +32,35 @@ Outputs:
 
 ## Supported Cron Expression Features
 
-CronSim aims to match [Debian's cron implementation](https://salsa.debian.org/debian/cron/-/tree/master/debian)
+CronSim aims to match [Debian's cron implementation](https://salsa.debian.org/debian/cron/-/tree/master/)
 (which itself is based on Paul Vixie's cron, with modifications). If CronSim evaluates
 an expression differently from Debian's cron, that's a bug.
 
 CronSim is open to adding support for non-standard syntax features, as long as
 they don't conflict or interfere with the standard syntax.
+
+## DST Transitions
+
+CronSim handles Daylight Saving Time transitions differently from
+Debian's cron. Debian has special handling for jobs with a granularity
+greater than one hour:
+
+```
+Local time changes of less than three hours, such as  those  caused  by
+the  start or end of Daylight Saving Time, are handled specially.  This
+only applies to jobs that run at a specific time and jobs that are  run
+with  a    granularity  greater  than  one hour.  Jobs that run more fre-
+quently are scheduled normally.
+
+If time has moved forward, those jobs that would have run in the inter-
+val that has been skipped will be run immediately.  Conversely, if time
+has moved backward, care is taken to avoid running jobs twice.
+```
+
+CronSim currently doesn't implement this special handling. For jobs that
+fall in the DST transition window, CronSim may skip a datetime (when time
+is moved forward), or generate duplicate datetime (when time is moved
+backward).
 
 ## Cron Expression Feature Matrix
 
