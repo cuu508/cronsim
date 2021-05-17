@@ -16,15 +16,6 @@ class TestParse(unittest.TestCase):
         self.assertEqual(w.months, set(range(1, 13)))
         self.assertEqual(w.weekdays, set(range(0, 8)))
 
-    def test_it_parses_six_components(self):
-        w = CronSim("* * * * * *", NOW)
-        self.assertEqual(w.seconds, set(range(0, 60)))
-        self.assertEqual(w.minutes, set(range(0, 60)))
-        self.assertEqual(w.hours, set(range(0, 24)))
-        self.assertEqual(w.days, set(range(1, 32)))
-        self.assertEqual(w.months, set(range(1, 13)))
-        self.assertEqual(w.weekdays, set(range(0, 8)))
-
     def test_it_parses_numbers(self):
         w = CronSim("1 * * * *", NOW)
         self.assertEqual(w.minutes, {1})
