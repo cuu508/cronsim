@@ -1,5 +1,7 @@
 # CronSim
 
+[![Tests](https://github.com/cuu508/cronsim/actions/workflows/pytest.yml/badge.svg)](https://github.com/cuu508/cronsim/actions/workflows/pytest.yml)
+
 Cron Sim(ulator), a cron expression parser and evaluator.
 
 Experimental and work in progress.
