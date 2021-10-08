@@ -133,7 +133,7 @@ class CronSim(object):
         if self.weekdays == RANGES[Field.DOW] and self.days != RANGES[Field.DAY]:
             self.weekdays = set()
 
-        if isinstance(self.tz, NoTz) or self.tz == pytz.utc:
+        if self.dt.tzinfo in (None, pytz.utc):
             # No special DST handling for naive datetimes or UTC
             pass
         else:
