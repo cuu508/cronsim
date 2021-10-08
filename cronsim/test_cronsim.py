@@ -397,5 +397,16 @@ class TestDstTransitions(unittest.TestCase):
         self.assertNextEqual(w, "2021-11-01T03:15:00+02:00")
 
 
+class TestOptimizations(unittest.TestCase):
+    def test_it_skips_fixup_for_naive_datetimes(self):
+        w = CronSim("1 1 L * *", NOW)
+        self.assertIsNone(w.fixup_tz)
+
+    def test_it_skips_fixup_for_utc_datetimes(self):
+        now = pytz.utc.localize(NOW)
+        w = CronSim("1 1 L * *", now)
+        self.assertIsNone(w.fixup_tz)
+
+
 if __name__ == "__main__":
     unittest.main()

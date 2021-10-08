@@ -133,12 +133,17 @@ class CronSim(object):
         if self.weekdays == RANGES[Field.DOW] and self.days != RANGES[Field.DAY]:
             self.weekdays = set()
 
-        # Special handling for jobs that run at specific time, or with a granularity
-        # greater than one hour.
-        # FIXME optimization: don't need to do this for naive datetimes and for UTC.
-        if not parts[1].startswith("*"):
-            self.fixup_tz, self.tz = self.tz, NoTz()
-            self.dt = self.dt.replace(tzinfo=None)
+        if isinstance(self.tz, NoTz) or self.tz == pytz.utc:
+            # No special DST handling for naive datetimes or UTC
+            pass
+        else:
+            # Special handling for jobs that run at specific time, or with
+            # a granularity greater than one hour (to mimic Debian cron).
+            # Convert to naive datetime, will convert back to the tz-aware
+            # in __next__, right before returning the value.
+            if not parts[1].startswith("*"):
+                self.fixup_tz, self.tz = self.tz, NoTz()
+                self.dt = self.dt.replace(tzinfo=None)
 
     def advance_minute(self):
         """Roll forward the minute component until it satisfies the constraints.
