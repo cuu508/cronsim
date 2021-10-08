@@ -41,7 +41,7 @@ they don't conflict or interfere with the standard syntax.
 
 ## DST Transitions
 
-CronSim handles Daylight Saving Time transitions differently from
+CronSim handles Daylight Saving Time transitions the same as
 Debian's cron. Debian has special handling for jobs with a granularity
 greater than one hour:
 
@@ -57,10 +57,8 @@ val that has been skipped will be run immediately.  Conversely, if time
 has moved backward, care is taken to avoid running jobs twice.
 ```
 
-CronSim currently doesn't implement this special handling. For jobs that
-fall in the DST transition window, CronSim may skip a datetime (when time
-is moved forward), or generate duplicate datetime (when time is moved
-backward).
+See test cases in `test_cronsim.py`, `TestDstTransitions` class
+for examples of this special handling.
 
 ## Cron Expression Feature Matrix
 

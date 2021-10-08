@@ -2,6 +2,8 @@ import calendar
 from datetime import datetime, timedelta as td, time
 from enum import IntEnum
 
+import pytz
+
 RANGES = [
     frozenset(range(0, 60)),
     frozenset(range(0, 24)),
@@ -98,7 +100,7 @@ class Field(IntEnum):
 
 
 class NoTz(object):
-    def localize(self, dt):
+    def localize(self, dt, is_dst=None):
         return dt
 
     def normalize(self, dt):
@@ -110,6 +112,7 @@ class CronSim(object):
 
     def __init__(self, expr, dt):
         self.tz = dt.tzinfo or NoTz()
+        self.fixup_tz = None
         self.dt = dt.replace(second=0, microsecond=0)
 
         parts = expr.split()
@@ -129,6 +132,13 @@ class CronSim(object):
         # If dow is unrestricted but day is restricted then match only with day:
         if self.weekdays == RANGES[Field.DOW] and self.days != RANGES[Field.DAY]:
             self.weekdays = set()
+
+        # Special handling for jobs that run at specific time, or with a granularity
+        # greater than one hour.
+        # FIXME optimization: don't need to do this for naive datetimes and for UTC.
+        if not parts[1].startswith("*"):
+            self.fixup_tz, self.tz = self.tz, NoTz()
+            self.dt = self.dt.replace(tzinfo=None)
 
     def advance_minute(self):
         """Roll forward the minute component until it satisfies the constraints.
@@ -243,5 +253,16 @@ class CronSim(object):
             if self.advance_minute():
                 continue
 
-            # If all constraints are satisfied then we have the result:
+            # If all constraints are satisfied then we have the result.
+            # The last step is to see if self.fixup_dst is set. If it is,
+            # localize self.dt and handle conflicts.
+            if self.fixup_tz:
+                while True:
+                    try:
+                        return self.fixup_tz.localize(self.dt, is_dst=None)
+                    except pytz.AmbiguousTimeError:
+                        return self.fixup_tz.localize(self.dt, is_dst=True)
+                    except pytz.NonExistentTimeError:
+                        self.dt += td(minutes=1)
+
             return self.dt

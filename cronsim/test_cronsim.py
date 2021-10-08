@@ -3,6 +3,7 @@ from itertools import product
 import unittest
 
 from cronsim import CronSim, CronSimError
+import pytz
 
 NOW = datetime(2020, 1, 1)
 
@@ -167,6 +168,233 @@ class TestIterator(unittest.TestCase):
     def test_it_handles_nth_weekday(self):
         dt = next(CronSim("1 1 * * 1#2", NOW))
         self.assertEqual(dt.isoformat(), "2020-01-13T01:01:00")
+
+
+class TestDstTransitions(unittest.TestCase):
+    tz = pytz.timezone("Europe/Riga")
+    # For reference, DST changes in Europe/Riga in 2021:
+    # DST begins (clock moves 1 hour forward) on March 28, 3AM:
+    #   2021-03-28T02:59:00+02:00
+    #   2021-03-28T04:00:00+03:00
+    #   2021-03-28T04:01:00+03:00
+    # DST ends (clock moves 1 hour backward) on October 31, 4AM:
+    #   2021-10-31T03:59:00+03:00
+    #   2021-10-31T03:00:00+02:00
+    #   2021-10-31T03:01:00+02:00
+
+    def assertNextEqual(self, iterator, expected_iso):
+        self.assertEqual(next(iterator).isoformat(), expected_iso)
+
+    def test_001_every_hour_mar(self):
+        now = self.tz.localize(datetime(2021, 3, 28, 1, 30))
+        w = CronSim("0 * * * *", now)
+        self.assertNextEqual(w, "2021-03-28T02:00:00+02:00")
+        self.assertNextEqual(w, "2021-03-28T04:00:00+03:00")
+
+    def test_001_every_hour_oct(self):
+        now = self.tz.localize(datetime(2021, 10, 31, 1, 30))
+        w = CronSim("0 * * * *", now)
+        self.assertNextEqual(w, "2021-10-31T02:00:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T03:00:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T03:00:00+02:00")
+        self.assertNextEqual(w, "2021-10-31T04:00:00+02:00")
+
+    def test_002_every_30_minutes_mar(self):
+        now = self.tz.localize(datetime(2021, 3, 28, 2, 10))
+        w = CronSim("*/30 * * * *", now)
+        self.assertNextEqual(w, "2021-03-28T02:30:00+02:00")
+        self.assertNextEqual(w, "2021-03-28T04:00:00+03:00")
+        self.assertNextEqual(w, "2021-03-28T04:30:00+03:00")
+
+    def test_002_every_30_minutes_oct(self):
+        now = self.tz.localize(datetime(2021, 10, 31, 2, 10))
+        w = CronSim("*/30 * * * *", now)
+        self.assertNextEqual(w, "2021-10-31T02:30:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T03:00:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T03:30:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T03:00:00+02:00")
+        self.assertNextEqual(w, "2021-10-31T03:30:00+02:00")
+        self.assertNextEqual(w, "2021-10-31T04:00:00+02:00")
+
+    def test_003_every_15_minutes_mar(self):
+        now = self.tz.localize(datetime(2021, 3, 28, 2, 40))
+        w = CronSim("*/15 * * * *", now)
+        self.assertNextEqual(w, "2021-03-28T02:45:00+02:00")
+        self.assertNextEqual(w, "2021-03-28T04:00:00+03:00")
+
+    def test_003_every_15_minutes_oct(self):
+        now = self.tz.localize(datetime(2021, 10, 31, 2, 40))
+        w = CronSim("*/15 * * * *", now)
+        self.assertNextEqual(w, "2021-10-31T02:45:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T03:00:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T03:15:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T03:30:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T03:45:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T03:00:00+02:00")
+        self.assertNextEqual(w, "2021-10-31T03:15:00+02:00")
+        self.assertNextEqual(w, "2021-10-31T03:30:00+02:00")
+        self.assertNextEqual(w, "2021-10-31T03:45:00+02:00")
+        self.assertNextEqual(w, "2021-10-31T04:00:00+02:00")
+
+    def test_004_every_2_hours_mar(self):
+        now = self.tz.localize(datetime(2021, 3, 28, 1, 30))
+        w = CronSim("0 */2 * * *", now)
+        self.assertNextEqual(w, "2021-03-28T02:00:00+02:00")
+        self.assertNextEqual(w, "2021-03-28T04:00:00+03:00")
+        self.assertNextEqual(w, "2021-03-28T06:00:00+03:00")
+
+    def test_004_every_2_hours_oct(self):
+        now = self.tz.localize(datetime(2021, 10, 31, 1, 30))
+        w = CronSim("0 */2 * * *", now)
+        self.assertNextEqual(w, "2021-10-31T02:00:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T04:00:00+02:00")
+        self.assertNextEqual(w, "2021-10-31T06:00:00+02:00")
+
+    def test_005_30_minutes_past_every_2_hours_mar(self):
+        now = self.tz.localize(datetime(2021, 3, 28, 1, 30))
+        w = CronSim("30 */2 * * *", now)
+        self.assertNextEqual(w, "2021-03-28T02:30:00+02:00")
+        self.assertNextEqual(w, "2021-03-28T04:30:00+03:00")
+
+    def test_005_30_minutes_past_every_2_hours_oct(self):
+        now = self.tz.localize(datetime(2021, 10, 31, 1, 30))
+        w = CronSim("30 */2 * * *", now)
+        self.assertNextEqual(w, "2021-10-31T02:30:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T04:30:00+02:00")
+
+    def test_006_every_3_hours_oct(self):
+        now = self.tz.localize(datetime(2021, 10, 31, 1, 30))
+        w = CronSim("0 */3 * * *", now)
+        self.assertNextEqual(w, "2021-10-31T03:00:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T03:00:00+02:00")
+        self.assertNextEqual(w, "2021-10-31T06:00:00+02:00")
+
+    def test_008_at_1_2_3_4_5_mar(self):
+        now = self.tz.localize(datetime(2021, 3, 28, 1, 30))
+        w = CronSim("0 1,2,3,4,5 * * *", now)
+        self.assertNextEqual(w, "2021-03-28T02:00:00+02:00")
+        self.assertNextEqual(w, "2021-03-28T04:00:00+03:00")
+        self.assertNextEqual(w, "2021-03-28T05:00:00+03:00")
+
+    def test_008_at_1_2_3_4_5_oct(self):
+        now = self.tz.localize(datetime(2021, 10, 31, 1, 30))
+        w = CronSim("0 1,2,3,4,5 * * *", now)
+        self.assertNextEqual(w, "2021-10-31T02:00:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T03:00:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T04:00:00+02:00")
+
+    def test_009_30_past_1_2_3_4_5_mar(self):
+        now = self.tz.localize(datetime(2021, 3, 28, 1, 30))
+        w = CronSim("30 1,2,3,4,5 * * *", now)
+        self.assertNextEqual(w, "2021-03-28T02:30:00+02:00")
+        self.assertNextEqual(w, "2021-03-28T04:00:00+03:00")
+        self.assertNextEqual(w, "2021-03-28T04:30:00+03:00")
+
+    def test_009_30_past_1_2_3_4_5_oct(self):
+        now = self.tz.localize(datetime(2021, 10, 31, 1, 30))
+        w = CronSim("30 1,2,3,4,5 * * *", now)
+        self.assertNextEqual(w, "2021-10-31T02:30:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T03:30:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T04:30:00+02:00")
+
+    def test_010_at_2_mar(self):
+        now = self.tz.localize(datetime(2021, 3, 28, 1, 30))
+        w = CronSim("0 2 * * *", now)
+        self.assertNextEqual(w, "2021-03-28T02:00:00+02:00")
+        self.assertNextEqual(w, "2021-03-29T02:00:00+03:00")
+
+    def test_010_at_2_oct(self):
+        now = self.tz.localize(datetime(2021, 10, 31, 1, 30))
+        w = CronSim("0 2 * * *", now)
+        self.assertNextEqual(w, "2021-10-31T02:00:00+03:00")
+        self.assertNextEqual(w, "2021-11-01T02:00:00+02:00")
+
+    def test_011_at_3_mar(self):
+        now = self.tz.localize(datetime(2021, 3, 27, 1, 30))
+        w = CronSim("0 3 * * *", now)
+        self.assertNextEqual(w, "2021-03-27T03:00:00+02:00")
+        self.assertNextEqual(w, "2021-03-28T04:00:00+03:00")
+        self.assertNextEqual(w, "2021-03-29T03:00:00+03:00")
+
+    def test_011_at_3_oct(self):
+        now = self.tz.localize(datetime(2021, 10, 31, 1, 30))
+        w = CronSim("0 3 * * *", now)
+        self.assertNextEqual(w, "2021-10-31T03:00:00+03:00")
+        self.assertNextEqual(w, "2021-11-01T03:00:00+02:00")
+
+    def test_012_at_4_mar(self):
+        now = self.tz.localize(datetime(2021, 3, 27, 1, 30))
+        w = CronSim("0 4 * * *", now)
+        self.assertNextEqual(w, "2021-03-27T04:00:00+02:00")
+        self.assertNextEqual(w, "2021-03-28T04:00:00+03:00")
+        self.assertNextEqual(w, "2021-03-29T04:00:00+03:00")
+
+    def test_012_at_4_oct(self):
+        now = self.tz.localize(datetime(2021, 10, 30, 1, 30))
+        w = CronSim("0 4 * * *", now)
+        self.assertNextEqual(w, "2021-10-30T04:00:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T04:00:00+02:00")
+        self.assertNextEqual(w, "2021-11-01T04:00:00+02:00")
+
+    def test_014_every_hour_enumerated_mar(self):
+        now = self.tz.localize(datetime(2021, 3, 28, 1, 30))
+        w = CronSim(
+            "0 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23 * * *", now
+        )
+        self.assertNextEqual(w, "2021-03-28T02:00:00+02:00")
+        self.assertNextEqual(w, "2021-03-28T04:00:00+03:00")
+        self.assertNextEqual(w, "2021-03-28T05:00:00+03:00")
+
+    def test_014_every_hour_enumerated_oct(self):
+        now = self.tz.localize(datetime(2021, 10, 31, 1, 30))
+        w = CronSim(
+            "0 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23 * * *", now
+        )
+        self.assertNextEqual(w, "2021-10-31T02:00:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T03:00:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T04:00:00+02:00")
+
+    def test_015_every_other_hour_enumerated_mar(self):
+        now = self.tz.localize(datetime(2021, 3, 28, 0, 30))
+        w = CronSim("0 1,3,5,7,9,11,13,15,17,19,21,23 * * *", now)
+        self.assertNextEqual(w, "2021-03-28T01:00:00+02:00")
+        self.assertNextEqual(w, "2021-03-28T04:00:00+03:00")
+        self.assertNextEqual(w, "2021-03-28T05:00:00+03:00")
+
+    def test_015_every_other_hour_enumerated_oct(self):
+        now = self.tz.localize(datetime(2021, 10, 31, 0, 30))
+        w = CronSim("0 1,3,5,7,9,11,13,15,17,19,21,23 * * *", now)
+        self.assertNextEqual(w, "2021-10-31T01:00:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T03:00:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T05:00:00+02:00")
+
+    def test_016_at_1_to_5_mar(self):
+        now = self.tz.localize(datetime(2021, 3, 28, 1, 30))
+        w = CronSim("0 1-5 * * *", now)
+        self.assertNextEqual(w, "2021-03-28T02:00:00+02:00")
+        self.assertNextEqual(w, "2021-03-28T04:00:00+03:00")
+        self.assertNextEqual(w, "2021-03-28T05:00:00+03:00")
+
+    def test_016_at_1_to_5_oct(self):
+        now = self.tz.localize(datetime(2021, 10, 31, 1, 30))
+        w = CronSim("0 1-5 * * *", now)
+        self.assertNextEqual(w, "2021-10-31T02:00:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T03:00:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T04:00:00+02:00")
+
+    def test_at_3_15_mar(self):
+        now = self.tz.localize(datetime(2021, 3, 27, 0, 0))
+        w = CronSim("15 3 * * *", now)
+        self.assertNextEqual(w, "2021-03-27T03:15:00+02:00")
+        self.assertNextEqual(w, "2021-03-28T04:00:00+03:00")
+        self.assertNextEqual(w, "2021-03-29T03:15:00+03:00")
+
+    def test_at_3_15_oct(self):
+        now = self.tz.localize(datetime(2021, 10, 30, 0, 0))
+        w = CronSim("15 3 * * *", now)
+        self.assertNextEqual(w, "2021-10-30T03:15:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T03:15:00+03:00")
+        self.assertNextEqual(w, "2021-11-01T03:15:00+02:00")
 
 
 if __name__ == "__main__":
