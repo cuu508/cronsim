@@ -156,6 +156,13 @@ class CronSim(object):
         if self.dt.minute in self.minutes:
             return False
 
+        if len(self.minutes) == 1:
+            # An optimization for the special case where self.minutes has exactly
+            # one element. Instead of advancing one minute per iteration,
+            # make a jump from the current minute to the target minute.
+            delta = (next(iter(self.minutes)) - self.dt.minute) % 60
+            self.dt = self.tz.normalize(self.dt + td(minutes=delta))
+
         while self.dt.minute not in self.minutes:
             self.dt = self.tz.normalize(self.dt + td(minutes=1))
             if self.dt.minute == 0:
