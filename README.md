@@ -6,6 +6,16 @@ Cron Sim(ulator), a cron expression parser and evaluator.
 
 Experimental and work in progress.
 
+My goal is to eventually use CronSim in the
+[Healthchecks](https://github.com/healthchecks/healthchecks/) project. Design
+priorities:
+
+* Correctness. CronSim tries to match Debian's cron as closely as possible,
+  including its quirky behaviour during DST transitions.
+* Readability. Prefer simple over clever.
+* Minimalism. Don't implement features that Healthchecks will not use
+  (for example, iteration in reverse, or the seconds field in cron expressions).
+
 ## Usage
 
 ```python
