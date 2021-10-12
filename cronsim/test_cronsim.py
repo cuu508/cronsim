@@ -396,6 +396,32 @@ class TestDstTransitions(unittest.TestCase):
         self.assertNextEqual(w, "2021-10-31T03:15:00+03:00")
         self.assertNextEqual(w, "2021-11-01T03:15:00+02:00")
 
+    def test_every_minute_mar(self):
+        now = self.tz.localize(datetime(2021, 3, 28, 2, 58))
+        w = CronSim("* * * * *", now)
+        self.assertNextEqual(w, "2021-03-28T02:59:00+02:00")
+        self.assertNextEqual(w, "2021-03-28T04:00:00+03:00")
+
+    def test_every_minute_oct(self):
+        now = self.tz.localize(datetime(2021, 10, 31, 3, 58), is_dst=True)
+        w = CronSim("* * * * *", now)
+        self.assertNextEqual(w, "2021-10-31T03:59:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T03:00:00+02:00")
+        self.assertNextEqual(w, "2021-10-31T03:01:00+02:00")
+
+    def test_every_minute_from_1_to_6_mar(self):
+        now = self.tz.localize(datetime(2021, 3, 28, 2, 58))
+        w = CronSim("* 1-6 * * *", now)
+        self.assertNextEqual(w, "2021-03-28T02:59:00+02:00")
+        self.assertNextEqual(w, "2021-03-28T04:00:00+03:00")
+
+    def test_every_minute_from_1_to_6_oct(self):
+        now = self.tz.localize(datetime(2021, 10, 31, 3, 58), is_dst=True)
+        w = CronSim("* 1-6 * * *", now)
+        self.assertNextEqual(w, "2021-10-31T03:59:00+03:00")
+        self.assertNextEqual(w, "2021-10-31T03:00:00+02:00")
+        self.assertNextEqual(w, "2021-10-31T03:01:00+02:00")
+
 
 class TestOptimizations(unittest.TestCase):
     def test_it_skips_fixup_for_naive_datetimes(self):

@@ -141,9 +141,14 @@ class CronSim(object):
             # a granularity greater than one hour (to mimic Debian cron).
             # Convert to naive datetime, will convert back to the tz-aware
             # in __next__, right before returning the value.
-            if not parts[1].startswith("*"):
+            if not parts[0].startswith("*") and not parts[1].startswith("*"):
                 self.fixup_tz, self.tz = self.tz, NoTz()
                 self.dt = self.dt.replace(tzinfo=None)
+
+    def tick(self, minutes=1):
+        """ Roll self.dt forward by 1 or more minutes and fix timezone. """
+
+        self.dt = self.tz.normalize(self.dt + td(minutes=minutes))
 
     def advance_minute(self):
         """Roll forward the minute component until it satisfies the constraints.
@@ -161,10 +166,10 @@ class CronSim(object):
             # one element. Instead of advancing one minute per iteration,
             # make a jump from the current minute to the target minute.
             delta = (next(iter(self.minutes)) - self.dt.minute) % 60
-            self.dt = self.tz.normalize(self.dt + td(minutes=delta))
+            self.tick(minutes=delta)
 
         while self.dt.minute not in self.minutes:
-            self.dt = self.tz.normalize(self.dt + td(minutes=1))
+            self.tick()
             if self.dt.minute == 0:
                 # Break out to re-check month, day and hour
                 break
@@ -184,7 +189,7 @@ class CronSim(object):
 
         self.dt = self.dt.replace(minute=0)
         while self.dt.hour not in self.hours:
-            self.dt = self.tz.normalize(self.dt + td(hours=1))
+            self.tick(minutes=60)
             if self.dt.hour == 0:
                 # break out to re-check month and day
                 break
@@ -251,7 +256,7 @@ class CronSim(object):
         return self
 
     def __next__(self):
-        self.dt += td(minutes=1)
+        self.tick()
 
         while True:
             self.advance_month()
