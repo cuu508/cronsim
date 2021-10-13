@@ -92,7 +92,7 @@ for examples of this special handling.
 | ------------------------ | :----: | :------: | :-----: |
 | Seconds in the 6th field | No     | Yes      | No      |
 | Special character "L"    | No     | Yes      | Yes     |
-| N-th weekday of month    | Yes    | Yes      | Yes     |
+| N-th weekday of month    | No     | Yes      | Yes     |
 
 
 **Seconds in the 6th field**: an optional sixth field specifying seconds. Supports
