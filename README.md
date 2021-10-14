@@ -2,13 +2,11 @@
 
 [![Tests](https://github.com/cuu508/cronsim/actions/workflows/pytest.yml/badge.svg)](https://github.com/cuu508/cronsim/actions/workflows/pytest.yml)
 
-Cron Sim(ulator), a cron expression parser and evaluator.
+Cron Sim(ulator), a cron expression parser and evaluator. CronSim is written
+for and being used in [Healthchecks](https://github.com/healthchecks/healthchecks/)
+(a cron job monitoring service).
 
-Experimental and work in progress.
-
-My goal is to eventually use CronSim in the
-[Healthchecks](https://github.com/healthchecks/healthchecks/) project. Design
-priorities:
+Design priorities:
 
 * Correctness. CronSim tries to match Debian's cron as closely as possible,
   including its quirky behaviour during DST transitions.
