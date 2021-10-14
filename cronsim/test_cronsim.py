@@ -159,6 +159,13 @@ class TestValidation(unittest.TestCase):
         with self.assertRaises(CronSimError):
             CronSim("* * * * 1#6", NOW)
 
+    def test_it_checks_day_of_month_range(self):
+        with self.assertRaises(CronSimError):
+            CronSim("* * 30 2 *", NOW)
+
+        with self.assertRaises(CronSimError):
+            CronSim("* * 31 4 *", NOW)
+
 
 class TestIterator(unittest.TestCase):
     def test_it_handles_l(self):

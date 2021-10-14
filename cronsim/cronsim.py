@@ -15,6 +15,7 @@ RANGES = [
 
 SYMBOLIC_DAYS = "SUN MON TUE WED THU FRI SAT".split()
 SYMBOLIC_MONTHS = "JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC".split()
+DAYS_IN_MONTH = [None, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
 
 class CronSimError(Exception):
@@ -108,7 +109,7 @@ class NoTz(object):
 
 
 class CronSim(object):
-    LAST = 1000
+    LAST = -1000
 
     def __init__(self, expr, dt):
         self.tz = dt.tzinfo or NoTz()
@@ -132,6 +133,11 @@ class CronSim(object):
         # If dow is unrestricted but day is restricted then match only with day:
         if self.weekdays == RANGES[Field.DOW] and self.days != RANGES[Field.DAY]:
             self.weekdays = set()
+
+        if len(self.days) and min(self.days) > 29:
+            # Check if we have any month with enough days
+            if min(self.days) > max(DAYS_IN_MONTH[month] for month in self.months):
+                raise CronSimError("Bad day-of-month")
 
         if self.dt.tzinfo in (None, pytz.utc):
             # No special DST handling for naive datetimes or UTC
