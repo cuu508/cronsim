@@ -1,1 +1,1 @@
-from .cronsim import CronSim
+from .cronsim import CronSim, CronSimError
