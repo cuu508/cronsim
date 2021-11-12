@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="cronsim",
-    version="1.0",
+    version="2.0",
     url="https://github.com/cuu508/cronsim",
     license="BSD",
     author="Pēteris Caune",
@@ -15,7 +15,6 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     platforms="any",
-    install_requires=["pytz"],
     classifiers=[
         # As from http://pypi.python.org/pypi?%3Aaction=list_classifiers
         # 'Development Status :: 1 - Planning',

@@ -2,11 +2,6 @@ import calendar
 from datetime import datetime, timedelta as td, time, timezone
 from enum import IntEnum
 
-try:
-    from zoneinfo import ZoneInfo
-except ImportError:
-    from backports.zoneinfo import ZoneInfo
-
 UTC = timezone.utc
 
 RANGES = [

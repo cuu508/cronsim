@@ -47,15 +47,13 @@ Outputs:
 2292-02-29 00:00:00
 ```
 
-## CronSim Depends on pytz
+## CronSim Works With zoneinfo
 
-CronSim has one dependency: [pytz](https://pythonhosted.org/pytz/), for
-handling timezones and timezone-aware datetimes. CronSim is *not* tested with
-[dateutil](https://github.com/dateutil/dateutil),
-[tzlocal](https://github.com/regebro/tzlocal) or Python's built-in
-[zoneinfo](https://docs.python.org/3/library/zoneinfo.html) libraries.
+CronSim starting from version 2.0 is designed to work with timezones provided by
+the zoneinfo module.
 
-CronSim relies on the following features of pytz, all related to DST handling:
+A previous version, CronSim 1.0, was designed for pytz and relied on its
+following non-standard features:
 
 * the non-standard `is_dst` flag in the `localize()` method
 * the `pytz.AmbiguousTimeError` and `pytz.NonExistentTimeError` exceptions
