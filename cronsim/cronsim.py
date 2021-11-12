@@ -1,8 +1,13 @@
 import calendar
-from datetime import datetime, timedelta as td, time
+from datetime import datetime, timedelta as td, time, timezone
 from enum import IntEnum
 
-import pytz
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
+
+UTC = timezone.utc
 
 RANGES = [
     frozenset(range(0, 60)),
@@ -100,20 +105,14 @@ class Field(IntEnum):
         return {self.int(s)}
 
 
-class NoTz(object):
-    def localize(self, dt, is_dst=None):
-        return dt
-
-    def normalize(self, dt):
-        return dt
+def is_imaginary(dt):
+    return dt != dt.astimezone(UTC).astimezone(dt.tzinfo)
 
 
 class CronSim(object):
     LAST = -1000
 
     def __init__(self, expr, dt):
-        self.tz = dt.tzinfo or NoTz()
-        self.fixup_tz = None
         self.dt = dt.replace(second=0, microsecond=0)
 
         parts = expr.split()
@@ -139,22 +138,26 @@ class CronSim(object):
             if min(self.days) > max(DAYS_IN_MONTH[month] for month in self.months):
                 raise CronSimError("Bad day-of-month")
 
-        if self.dt.tzinfo in (None, pytz.utc):
-            # No special DST handling for naive datetimes or UTC
+        self.fixup_tz = None
+        if self.dt.tzinfo in (None, UTC):
+            # No special DST handling for UTC
             pass
         else:
-            # Special handling for jobs that run at specific time, or with
-            # a granularity greater than one hour (to mimic Debian cron).
-            # Convert to naive datetime, will convert back to the tz-aware
-            # in __next__, right before returning the value.
             if not parts[0].startswith("*") and not parts[1].startswith("*"):
-                self.fixup_tz, self.tz = self.tz, NoTz()
+                # Will use special handling for jobs that run at specific time, or
+                # with a granularity greater than one hour (to mimic Debian cron).
+                self.fixup_tz = self.dt.tzinfo
                 self.dt = self.dt.replace(tzinfo=None)
 
     def tick(self, minutes=1):
         """ Roll self.dt forward by 1 or more minutes and fix timezone. """
 
-        self.dt = self.tz.normalize(self.dt + td(minutes=minutes))
+        if self.dt.tzinfo not in (None, UTC):
+            as_utc = self.dt.astimezone(UTC)
+            as_utc += td(minutes=minutes)
+            self.dt = as_utc.astimezone(self.dt.tzinfo)
+        else:
+            self.dt += td(minutes=minutes)
 
     def advance_minute(self):
         """Roll forward the minute component until it satisfies the constraints.
@@ -243,7 +246,7 @@ class CronSim(object):
                 # This significantly speeds up the "0 0 * 2 MON#5" case
                 break
 
-        self.dt = self.tz.localize(datetime.combine(needle, time()))
+        self.dt = datetime.combine(needle, time(), tzinfo=self.dt.tzinfo)
         return True
 
     def advance_month(self):
@@ -256,7 +259,7 @@ class CronSim(object):
         while needle.month not in self.months:
             needle = (needle.replace(day=1) + td(days=32)).replace(day=1)
 
-        self.dt = self.tz.localize(datetime.combine(needle, time()))
+        self.dt = datetime.combine(needle, time(), tzinfo=self.dt.tzinfo)
 
     def __iter__(self):
         return self
@@ -277,15 +280,14 @@ class CronSim(object):
                 continue
 
             # If all constraints are satisfied then we have the result.
-            # The last step is to see if self.fixup_dst is set. If it is,
-            # localize self.dt and handle conflicts.
+            # The last step is to check if we need to fix up an imaginary
+            # or ambiguous date.
             if self.fixup_tz:
-                while True:
-                    try:
-                        return self.fixup_tz.localize(self.dt, is_dst=None)
-                    except pytz.AmbiguousTimeError:
-                        return self.fixup_tz.localize(self.dt, is_dst=True)
-                    except pytz.NonExistentTimeError:
-                        self.dt += td(minutes=1)
+                result = self.dt.replace(tzinfo=self.fixup_tz, fold=0)
+                while is_imaginary(result):
+                    self.dt += td(minutes=1)
+                    result = self.dt.replace(tzinfo=self.fixup_tz)
+
+                return result
 
             return self.dt
