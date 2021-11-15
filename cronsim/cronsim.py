@@ -1,5 +1,5 @@
 import calendar
-from datetime import datetime, timedelta as td, time, timezone
+from datetime import date, datetime, timedelta as td, time, timezone
 from enum import IntEnum
 
 UTC = timezone.utc
@@ -107,7 +107,7 @@ def is_imaginary(dt):
 class CronSim(object):
     LAST = -1000
 
-    def __init__(self, expr, dt):
+    def __init__(self, expr: str, dt: datetime):
         self.dt = dt.replace(second=0, microsecond=0)
 
         parts = expr.split()
@@ -144,7 +144,7 @@ class CronSim(object):
                 self.fixup_tz = self.dt.tzinfo
                 self.dt = self.dt.replace(tzinfo=None)
 
-    def tick(self, minutes=1):
+    def tick(self, minutes: int = 1) -> None:
         """ Roll self.dt forward by 1 or more minutes and fix timezone. """
 
         if self.dt.tzinfo not in (None, UTC):
@@ -154,7 +154,7 @@ class CronSim(object):
         else:
             self.dt += td(minutes=minutes)
 
-    def advance_minute(self):
+    def advance_minute(self) -> bool:
         """Roll forward the minute component until it satisfies the constraints.
 
         Return False if the minute meets contraints without modification.
@@ -180,7 +180,7 @@ class CronSim(object):
 
         return True
 
-    def advance_hour(self):
+    def advance_hour(self) -> bool:
         """Roll forward the hour component until it satisfies the constraints.
 
         Return False if the hour meets contraints without modification.
@@ -200,7 +200,7 @@ class CronSim(object):
 
         return True
 
-    def match_day(self, d):
+    def match_day(self, d: date) -> bool:
         # Does the day of the month match?
         if d.day in self.days:
             return True
@@ -219,7 +219,9 @@ class CronSim(object):
         if (dow, idx) in self.weekdays or (dow % 7, idx) in self.weekdays:
             return True
 
-    def advance_day(self):
+        return False
+
+    def advance_day(self) -> bool:
         """Roll forward the day component until it satisfies the constraints.
 
         This method advances the date until it matches either the
@@ -244,7 +246,7 @@ class CronSim(object):
         self.dt = datetime.combine(needle, time(), tzinfo=self.dt.tzinfo)
         return True
 
-    def advance_month(self):
+    def advance_month(self) -> None:
         """Roll forward the month component until it satisfies the constraints. """
 
         if self.dt.month in self.months:
@@ -259,7 +261,7 @@ class CronSim(object):
     def __iter__(self):
         return self
 
-    def __next__(self):
+    def __next__(self) -> datetime:
         self.tick()
 
         while True:
