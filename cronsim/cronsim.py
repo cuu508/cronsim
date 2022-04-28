@@ -59,6 +59,13 @@ class Field(IntEnum):
                 result.update(self.parse(term))
             return result
 
+        if "L" in s.upper() and self == Field.DOW:
+            if not s.upper().endswith("L"):
+                # If DoW contains "L", then L must be at the end
+                raise CronSimError("Bad value: %s" % s)
+            dow = self.int(s[:-1])
+            return {(dow, CronSim.LAST)}
+
         if "#" in s and self == Field.DOW:
             term, nth = s.split("#", maxsplit=1)
             nth = _int(nth)
@@ -145,7 +152,7 @@ class CronSim(object):
                 self.dt = self.dt.replace(tzinfo=None)
 
     def tick(self, minutes: int = 1) -> None:
-        """ Roll self.dt forward by 1 or more minutes and fix timezone. """
+        """Roll self.dt forward by 1 or more minutes and fix timezone."""
 
         if self.dt.tzinfo not in (None, UTC):
             as_utc = self.dt.astimezone(UTC)
@@ -205,7 +212,7 @@ class CronSim(object):
         if d.day in self.days:
             return True
 
-        if CronSim.LAST in self.days:
+        if self.LAST in self.days:
             _, last = calendar.monthrange(d.year, d.month)
             if d.day == last:
                 return True
@@ -214,6 +221,13 @@ class CronSim(object):
         dow = d.weekday() + 1
         if dow in self.weekdays or dow % 7 in self.weekdays:
             return True
+
+        if (dow, self.LAST) in self.weekdays or (dow % 7, self.LAST) in self.weekdays:
+            _, last = calendar.monthrange(d.year, d.month)
+            if d.day + 7 > last:
+                # Same day next week would be outside this month.
+                # So this is the last one this month.
+                return True
 
         idx = (d.day + 6) // 7
         if (dow, idx) in self.weekdays or (dow % 7, idx) in self.weekdays:
@@ -247,7 +261,7 @@ class CronSim(object):
         return True
 
     def advance_month(self) -> None:
-        """Roll forward the month component until it satisfies the constraints. """
+        """Roll forward the month component until it satisfies the constraints."""
 
         if self.dt.month in self.months:
             return

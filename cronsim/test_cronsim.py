@@ -115,6 +115,10 @@ class TestParse(unittest.TestCase):
         w = CronSim("* * * * 7", NOW)
         self.assertEqual(w.weekdays, {7})
 
+    def test_it_accepts_weekday_l(self):
+        w = CronSim("* * * * 5L", NOW)
+        self.assertEqual(w.weekdays, {(5, CronSim.LAST)})
+
 
 class TestValidation(unittest.TestCase):
     def test_it_rejects_4_components(self):
@@ -170,11 +174,43 @@ class TestValidation(unittest.TestCase):
         with self.assertRaises(CronSimError):
             CronSim("* * 31 4 *", NOW)
 
+    def test_it_rejects_dow_l_range(self):
+        with self.assertRaises(CronSimError):
+            CronSim("* * * * 5L-6", NOW)
+
+    def test_it_rejects_dow_l_hash(self):
+        with self.assertRaises(CronSimError):
+            CronSim("* * * * 5L#1", NOW)
+
+    def test_it_rejects_dow_l_slash(self):
+        with self.assertRaises(CronSimError):
+            CronSim("* * * * 5L/3", NOW)
+
 
 class TestIterator(unittest.TestCase):
     def test_it_handles_l(self):
         dt = next(CronSim("1 1 L * *", NOW))
         self.assertEqual(dt.isoformat(), "2020-01-31T01:01:00")
+
+    def test_it_handles_last_friday(self):
+        it = CronSim("1 1 * * 5L", NOW)
+        self.assertEqual(next(it).isoformat(), "2020-01-31T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-02-28T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-03-27T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-04-24T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-05-29T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-06-26T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-07-31T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-08-28T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-09-25T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-10-30T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-11-27T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-12-25T01:01:00")
+
+    def test_it_handles_last_sunday_two_notations(self):
+        for pattern in ("1 1 * * 0L", "1 1 * * 7L"):
+            dt = next(CronSim(pattern, NOW))
+            self.assertEqual(dt.isoformat(), "2020-01-26T01:01:00")
 
     def test_it_handles_nth_weekday(self):
         dt = next(CronSim("1 1 * * 1#2", NOW))

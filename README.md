@@ -91,24 +91,30 @@ for examples of this special handling.
 
 ## Cron Expression Feature Matrix
 
-| Feature                  | Debian | croniter | cronsim |
-| ------------------------ | :----: | :------: | :-----: |
-| Seconds in the 6th field | No     | Yes      | No      |
-| Special character "L"    | No     | Yes      | Yes     |
-| N-th weekday of month    | No     | Yes      | Yes     |
+| Feature                              | Debian | croniter | cronsim |
+| ------------------------------------ | :----: | :------: | :-----: |
+| Seconds in the 6th field             | No     | Yes      | No      |
+| "L" as the day-of-month              | No     | Yes      | Yes     |
+| "L" in the day-of-week field         | No     | No       | Yes     |
+| Nth weekday of month                 | No     | Yes      | Yes     |
 
 
-**Seconds in the 6th field**: an optional sixth field specifying seconds. Supports
-same syntax features as the minutes field.
+**Seconds in the 6th field**: an optional sixth field specifying seconds.
+Supports the same syntax features as the minutes field.
 
 Example: `* * * * * */15` (every 15 seconds).
 
-**Special character "L"**: can be used in the day-of-month field and means
-"the last day of the month".
+**"L" as the day-of-month**: support for the "L" special character in the
+day-of-month field. Interpreted as "the last day of the month".
 
 Example: `0 0 L * *` (at the midnight of the last day of every month).
 
-**N-th weekday of month**: support for "{weekday}#{nth}" syntax.
+**"L" in the day-of-week field**: support for the "{weekday}L" syntax.
+For example, "5L" means "the last Friday of the month".
+
+Example: `0 0 * * 6L` (at the midnight of the last Saturday of every month).
+
+**Nth weekday of month**: support for "{weekday}#{nth}" syntax.
 For example, "MON#1" means "first Monday of the month", "MON#2" means "second Monday
 of the month".
 
