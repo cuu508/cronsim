@@ -23,8 +23,11 @@ class CronSimError(Exception):
 
 
 def _int(value):
-    if not value.isdigit():
+    if value == "":
         raise CronSimError("Bad value: %s" % value)
+    for ch in value:
+        if ch not in "0123456789":
+            raise CronSimError("Bad value: %s" % value)
 
     return int(value)
 

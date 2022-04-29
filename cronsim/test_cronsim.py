@@ -141,7 +141,7 @@ class TestValidation(unittest.TestCase):
             "* * * * MON-%s",
         )
 
-        bad_values = ("-1", "61", "ABC", "2/", "/2", "2#", "#2", "1##1", "1//2")
+        bad_values = ("-1", "61", "ABC", "2/", "/2", "2#", "#2", "1##1", "1//2", "¹")
 
         for pattern, s in product(patterns, bad_values):
             with self.assertRaises(CronSimError):
