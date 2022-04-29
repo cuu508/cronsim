@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="cronsim",
-    version="2.0-dev",
+    version="2.1-dev",
     url="https://github.com/cuu508/cronsim",
     license="BSD",
     author="Pēteris Caune",
