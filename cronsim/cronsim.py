@@ -60,9 +60,10 @@ class Field(IntEnum):
             return result
 
         if "L" in s.upper() and self == Field.DOW:
-            if not s.upper().endswith("L"):
-                # If DoW contains "L", then L must be at the end
+            value = s[:-1]
+            if not value.isdigit():
                 raise CronSimError("Bad value: %s" % s)
+
             dow = self.int(s[:-1])
             return {(dow, CronSim.LAST)}
 

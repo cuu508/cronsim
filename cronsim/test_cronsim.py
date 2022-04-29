@@ -186,6 +186,10 @@ class TestValidation(unittest.TestCase):
         with self.assertRaises(CronSimError):
             CronSim("* * * * 5L/3", NOW)
 
+    def test_it_rejects_symbolic_dow_l(self):
+        with self.assertRaises(CronSimError):
+            CronSim("* * * * MONL", NOW)
+
 
 class TestIterator(unittest.TestCase):
     def test_it_handles_l(self):
