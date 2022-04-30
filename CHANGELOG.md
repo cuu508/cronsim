@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-# 2.1 - Unreleased
+# 2.1 - 2022-04-30
 - Add support for "L" in the day-of-week field
 - Fix crash when "¹" passed in the input
 
