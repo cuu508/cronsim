@@ -10,26 +10,16 @@ RANGES = [
     frozenset(range(1, 32)),
     frozenset(range(1, 13)),
     frozenset(range(0, 8)),
-    frozenset(range(0, 60)),
 ]
 
 SYMBOLIC_DAYS = "SUN MON TUE WED THU FRI SAT".split()
 SYMBOLIC_MONTHS = "JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC".split()
 DAYS_IN_MONTH = [None, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+FIELD_NAMES = ["minute", "hour", "day-of-month", "month", "day-of-week"]
 
 
 class CronSimError(Exception):
     pass
-
-
-def _int(value):
-    if value == "":
-        raise CronSimError("Bad value: %s" % value)
-    for ch in value:
-        if ch not in "0123456789":
-            raise CronSimError("Bad value: %s" % value)
-
-    return int(value)
 
 
 class Field(IntEnum):
@@ -39,16 +29,28 @@ class Field(IntEnum):
     MONTH = 3
     DOW = 4
 
+    def msg(self):
+        return "Bad %s" % FIELD_NAMES[self]
+
+    def _int(self, value):
+        if value == "":
+            raise CronSimError(self.msg())
+        for ch in value:
+            if ch not in "0123456789":
+                raise CronSimError(self.msg())
+
+        return int(value)
+
     def int(self, s):
-        if self == Field.MONTH and s.upper() in SYMBOLIC_MONTHS:
-            return SYMBOLIC_MONTHS.index(s.upper()) + 1
+        if self == Field.MONTH and s in SYMBOLIC_MONTHS:
+            return SYMBOLIC_MONTHS.index(s) + 1
 
-        if self == Field.DOW and s.upper() in SYMBOLIC_DAYS:
-            return SYMBOLIC_DAYS.index(s.upper())
+        if self == Field.DOW and s in SYMBOLIC_DAYS:
+            return SYMBOLIC_DAYS.index(s)
 
-        v = _int(s)
+        v = self._int(s)
         if v not in RANGES[self]:
-            raise CronSimError("Bad value: %s" % s)
+            raise CronSimError(self.msg())
 
         return v
 
@@ -62,28 +64,28 @@ class Field(IntEnum):
                 result.update(self.parse(term))
             return result
 
-        if "L" in s.upper() and self == Field.DOW:
+        if self == Field.DOW and "L" in s:
             value = s[:-1]
             if not value.isdigit():
-                raise CronSimError("Bad value: %s" % s)
+                raise CronSimError(self.msg())
 
             dow = self.int(s[:-1])
             return {(dow, CronSim.LAST)}
 
         if "#" in s and self == Field.DOW:
             term, nth = s.split("#", maxsplit=1)
-            nth = _int(nth)
+            nth = self._int(nth)
             if nth < 1 or nth > 5:
-                raise CronSimError("Bad value: %s" % s)
+                raise CronSimError(self.msg())
 
             spec = (self.int(term), nth)
             return {spec}
 
         if "/" in s:
             term, step = s.split("/", maxsplit=1)
-            step = _int(step)
+            step = self._int(step)
             if step == 0:
-                raise CronSimError("Step cannot be zero")
+                raise CronSimError(self.msg())
 
             items = sorted(self.parse(term))
             if items == [CronSim.LAST]:
@@ -101,11 +103,11 @@ class Field(IntEnum):
             end = self.int(end)
 
             if end < start:
-                raise CronSimError("Range end cannot be smaller than start")
+                raise CronSimError(self.msg())
 
             return set(range(start, end + 1))
 
-        if self == Field.DAY and s in ("L", "l"):
+        if self == Field.DAY and s == "L":
             return {CronSim.LAST}
 
         return {self.int(s)}
@@ -121,7 +123,7 @@ class CronSim(object):
     def __init__(self, expr: str, dt: datetime):
         self.dt = dt.replace(second=0, microsecond=0)
 
-        parts = expr.split()
+        parts = expr.upper().split()
         if len(parts) != 5:
             raise CronSimError("Wrong number of fields")
 
@@ -142,7 +144,7 @@ class CronSim(object):
         if len(self.days) and min(self.days) > 29:
             # Check if we have any month with enough days
             if min(self.days) > max(DAYS_IN_MONTH[month] for month in self.months):
-                raise CronSimError("Bad day-of-month")
+                raise CronSimError(Field.DAY.msg())
 
         self.fixup_tz = None
         if self.dt.tzinfo in (None, UTC):

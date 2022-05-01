@@ -122,7 +122,7 @@ class TestParse(unittest.TestCase):
 
 class TestValidation(unittest.TestCase):
     def test_it_rejects_4_components(self):
-        with self.assertRaises(CronSimError):
+        with self.assertRaisesRegex(CronSimError, "Wrong number of fields"):
             CronSim("* * * *", NOW)
 
     def test_it_rejects_bad_values(self):
@@ -148,19 +148,19 @@ class TestValidation(unittest.TestCase):
                 CronSim(pattern % s, NOW)
 
     def test_it_rejects_lopsided_range(self):
-        with self.assertRaises(CronSimError):
+        with self.assertRaisesRegex(CronSimError, "Bad day-of-month"):
             CronSim("* * 5-1 * *", NOW)
 
     def test_it_rejects_underscores(self):
-        with self.assertRaises(CronSimError):
+        with self.assertRaisesRegex(CronSimError, "Bad minute"):
             CronSim("1-1_0 * * * *", NOW)
 
     def test_it_rejects_zero_step(self):
-        with self.assertRaises(CronSimError):
+        with self.assertRaisesRegex(CronSimError, "Bad minute"):
             CronSim("*/0 * * * *", NOW)
 
     def test_it_rejects_zero_nth(self):
-        with self.assertRaises(CronSimError):
+        with self.assertRaisesRegex(CronSimError, "Bad day-of-week"):
             CronSim("* * * * 1#0", NOW)
 
     def test_it_rejects_big_nth(self):
@@ -168,26 +168,26 @@ class TestValidation(unittest.TestCase):
             CronSim("* * * * 1#6", NOW)
 
     def test_it_checks_day_of_month_range(self):
-        with self.assertRaises(CronSimError):
+        with self.assertRaisesRegex(CronSimError, "Bad day-of-month"):
             CronSim("* * 30 2 *", NOW)
 
-        with self.assertRaises(CronSimError):
+        with self.assertRaisesRegex(CronSimError, "Bad day-of-month"):
             CronSim("* * 31 4 *", NOW)
 
     def test_it_rejects_dow_l_range(self):
-        with self.assertRaises(CronSimError):
+        with self.assertRaisesRegex(CronSimError, "Bad day-of-week"):
             CronSim("* * * * 5L-6", NOW)
 
     def test_it_rejects_dow_l_hash(self):
-        with self.assertRaises(CronSimError):
+        with self.assertRaisesRegex(CronSimError, "Bad day-of-week"):
             CronSim("* * * * 5L#1", NOW)
 
     def test_it_rejects_dow_l_slash(self):
-        with self.assertRaises(CronSimError):
+        with self.assertRaisesRegex(CronSimError, "Bad day-of-week"):
             CronSim("* * * * 5L/3", NOW)
 
     def test_it_rejects_symbolic_dow_l(self):
-        with self.assertRaises(CronSimError):
+        with self.assertRaisesRegex(CronSimError, "Bad day-of-week"):
             CronSim("* * * * MONL", NOW)
 
 
