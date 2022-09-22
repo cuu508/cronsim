@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-# Unreleased
+# 2.2 - 2022-09-22
 - Make validation error messages similar to Debian cron error messages
 - Change day-of-month and day-of-week handling to mimic Debian cron more closely
 
