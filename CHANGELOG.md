@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 
 # Unreleased
 - Make validation error messages similar to Debian cron error messages
+- Change day-of-month and day-of-week handling to mimic Debian cron more closely
 
 # 2.1 - 2022-04-30
 - Add support for "L" in the day-of-week field

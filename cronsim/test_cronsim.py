@@ -67,13 +67,15 @@ class TestParse(unittest.TestCase):
 
     def test_it_parses_unrestricted_day_restricted_dow(self):
         w = CronSim("* * * * 1", NOW)
-        self.assertEqual(w.days, set())
+        self.assertEqual(w.days, set(range(1, 32)))
         self.assertEqual(w.weekdays, {1})
+        self.assertTrue(w.day_and)
 
     def test_it_parses_restricted_day_unrestricted_dow(self):
         w = CronSim("* * 1 * *", NOW)
         self.assertEqual(w.days, {1})
-        self.assertEqual(w.weekdays, set())
+        self.assertEqual(w.weekdays, {0, 1, 2, 3, 4, 5, 6, 7})
+        self.assertTrue(w.day_and)
 
     def test_it_parses_nth_weekday(self):
         w = CronSim("* * * * 1#2", NOW)
@@ -219,6 +221,29 @@ class TestIterator(unittest.TestCase):
     def test_it_handles_nth_weekday(self):
         dt = next(CronSim("1 1 * * 1#2", NOW))
         self.assertEqual(dt.isoformat(), "2020-01-13T01:01:00")
+
+    def test_it_handles_dow_star(self):
+        # "First Sunday of the month"
+        it = CronSim("1 1 1-7 * */7", NOW)
+        self.assertEqual(next(it).isoformat(), "2020-01-05T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-02-02T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-03-01T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-04-05T01:01:00")
+
+    def test_it_handles_dom_star(self):
+        # "First Monday of the month"
+        it = CronSim("1 1 */100,1-7 * MON", NOW)
+        self.assertEqual(next(it).isoformat(), "2020-01-06T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-02-03T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-03-02T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-04-06T01:01:00")
+
+    def test_it_handles_no_matches(self):
+        # The first date of the month *and* the fourth Monday of the month
+        # will never yield results:
+        it = CronSim("1 1 */100 * MON#4", NOW)
+        with self.assertRaises(StopIteration):
+            next(it)
 
 
 class TestDstTransitions(unittest.TestCase):

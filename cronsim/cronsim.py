@@ -127,19 +127,16 @@ class CronSim(object):
         if len(parts) != 5:
             raise CronSimError("Wrong number of fields")
 
+        # In Debian cron, if either the day-of-month or the day-of-week field
+        # starts with a star, then there is an "AND" relationship between them.
+        # Otherwise it's "OR".
+        self.day_and = parts[2].startswith("*") or parts[4].startswith("*")
+
         self.minutes = Field.MINUTE.parse(parts[0])
         self.hours = Field.HOUR.parse(parts[1])
         self.days = Field.DAY.parse(parts[2])
         self.months = Field.MONTH.parse(parts[3])
         self.weekdays = Field.DOW.parse(parts[4])
-
-        # If day is unrestricted but dow is restricted then match only with dow:
-        if self.days == RANGES[Field.DAY] and self.weekdays != RANGES[Field.DOW]:
-            self.days = set()
-
-        # If dow is unrestricted but day is restricted then match only with day:
-        if self.weekdays == RANGES[Field.DOW] and self.days != RANGES[Field.DAY]:
-            self.weekdays = set()
 
         if len(self.days) and min(self.days) > 29:
             # Check if we have any month with enough days
@@ -213,8 +210,8 @@ class CronSim(object):
 
         return True
 
-    def match_day(self, d: date) -> bool:
-        # Does the day of the month match?
+    def match_dom(self, d: date) -> bool:
+        """Return True is day-of-month matches."""
         if d.day in self.days:
             return True
 
@@ -223,7 +220,10 @@ class CronSim(object):
             if d.day == last:
                 return True
 
-        # Does the day of the week match?
+        return False
+
+    def match_dow(self, d: date) -> bool:
+        """Return True is day-of-week matches."""
         dow = d.weekday() + 1
         if dow in self.weekdays or dow % 7 in self.weekdays:
             return True
@@ -240,6 +240,12 @@ class CronSim(object):
             return True
 
         return False
+
+    def match_day(self, d: date) -> bool:
+        if self.day_and:
+            return self.match_dom(d) and self.match_dow(d)
+
+        return self.match_dom(d) or self.match_dow(d)
 
     def advance_day(self) -> bool:
         """Roll forward the day component until it satisfies the constraints.
@@ -284,8 +290,14 @@ class CronSim(object):
     def __next__(self) -> datetime:
         self.tick()
 
+        start_year = self.dt.year
         while True:
             self.advance_month()
+            if self.dt.year > start_year + 50:
+                # Give up if there is no match for 50 years.
+                # It would be nice to detect "this will never yield any results"
+                # situations in a more intelligent way.
+                raise StopIteration
 
             if self.advance_day():
                 continue
