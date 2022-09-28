@@ -19,3 +19,5 @@ jobs:
         pip install backports.zoneinfo
     - name: Run tests
       run: python cronsim/test_cronsim.py
+    - name: Run mypy
+      run: pip install mypy && mypy --strict cronsim
