@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-# Unreleased
+# 2.3 - 2022-09-28
 - Add type hints
 - Remove python 3.6 support (EOL)
 
