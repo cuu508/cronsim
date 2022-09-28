@@ -1,20 +1,22 @@
 import calendar
 from datetime import date, datetime, timedelta as td, time, timezone
 from enum import IntEnum
+from typing import cast, Set, Tuple, Union
 
 UTC = timezone.utc
 
-RANGES = [
-    frozenset(range(0, 60)),
-    frozenset(range(0, 24)),
-    frozenset(range(1, 32)),
-    frozenset(range(1, 13)),
-    frozenset(range(0, 8)),
-]
+SpecItem = Union[int, Tuple[int, int]]
 
+RANGES = [
+    range(0, 60),
+    range(0, 24),
+    range(1, 32),
+    range(1, 13),
+    range(0, 8),
+]
 SYMBOLIC_DAYS = "SUN MON TUE WED THU FRI SAT".split()
 SYMBOLIC_MONTHS = "JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC".split()
-DAYS_IN_MONTH = [None, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+DAYS_IN_MONTH = [-1, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 FIELD_NAMES = ["minute", "hour", "day-of-month", "month", "day-of-week"]
 
 
@@ -29,10 +31,10 @@ class Field(IntEnum):
     MONTH = 3
     DOW = 4
 
-    def msg(self):
+    def msg(self) -> str:
         return "Bad %s" % FIELD_NAMES[self]
 
-    def _int(self, value):
+    def _int(self, value: str) -> int:
         if value == "":
             raise CronSimError(self.msg())
         for ch in value:
@@ -41,7 +43,7 @@ class Field(IntEnum):
 
         return int(value)
 
-    def int(self, s):
+    def int(self, s: str) -> int:
         if self == Field.MONTH and s in SYMBOLIC_MONTHS:
             return SYMBOLIC_MONTHS.index(s) + 1
 
@@ -54,9 +56,9 @@ class Field(IntEnum):
 
         return v
 
-    def parse(self, s):
+    def parse(self, s: str) -> Set[SpecItem]:
         if s == "*":
-            return RANGES[self]
+            return set(RANGES[self])
 
         if "," in s:
             result = set()
@@ -73,34 +75,39 @@ class Field(IntEnum):
             return {(dow, CronSim.LAST)}
 
         if "#" in s and self == Field.DOW:
-            term, nth = s.split("#", maxsplit=1)
-            nth = self._int(nth)
+            term, nth_str = s.split("#", maxsplit=1)
+            nth = self._int(nth_str)
             if nth < 1 or nth > 5:
                 raise CronSimError(self.msg())
 
-            spec = (self.int(term), nth)
-            return {spec}
+            nth_tuple = (self.int(term), nth)
+            return {nth_tuple}
 
         if "/" in s:
-            term, step = s.split("/", maxsplit=1)
-            step = self._int(step)
+            term, step_str = s.split("/", maxsplit=1)
+            step = self._int(step_str)
             if step == 0:
                 raise CronSimError(self.msg())
 
-            items = sorted(self.parse(term))
-            if items == [CronSim.LAST]:
+            items = self.parse(term)
+            if items == {CronSim.LAST}:
                 return items
 
             if len(items) == 1:
-                start = items[0]
+                start = items.pop()
+                assert isinstance(start, int)
                 end = max(RANGES[self])
-                items = range(start, end + 1)
-            return set(items[::step])
+                tail = range(start, end + 1)
+                return set(tail[::step])
+
+            # items is an unordered set, so sort it before taking
+            # every step-th item. Then convert it back to set.
+            return set(sorted(items)[::step])
 
         if "-" in s:
-            start, end = s.split("-", maxsplit=1)
-            start = self.int(start)
-            end = self.int(end)
+            start_str, end_str = s.split("-", maxsplit=1)
+            start = self.int(start_str)
+            end = self.int(end_str)
 
             if end < start:
                 raise CronSimError(self.msg())
@@ -113,7 +120,7 @@ class Field(IntEnum):
         return {self.int(s)}
 
 
-def is_imaginary(dt):
+def is_imaginary(dt: datetime) -> bool:
     return dt != dt.astimezone(UTC).astimezone(dt.tzinfo)
 
 
@@ -132,10 +139,10 @@ class CronSim(object):
         # Otherwise it's "OR".
         self.day_and = parts[2].startswith("*") or parts[4].startswith("*")
 
-        self.minutes = Field.MINUTE.parse(parts[0])
-        self.hours = Field.HOUR.parse(parts[1])
-        self.days = Field.DAY.parse(parts[2])
-        self.months = Field.MONTH.parse(parts[3])
+        self.minutes = cast(Set[int], Field.MINUTE.parse(parts[0]))
+        self.hours = cast(Set[int], Field.HOUR.parse(parts[1]))
+        self.days = cast(Set[int], Field.DAY.parse(parts[2]))
+        self.months = cast(Set[int], Field.MONTH.parse(parts[3]))
         self.weekdays = Field.DOW.parse(parts[4])
 
         if len(self.days) and min(self.days) > 29:
@@ -284,7 +291,7 @@ class CronSim(object):
 
         self.dt = datetime.combine(needle, time(), tzinfo=self.dt.tzinfo)
 
-    def __iter__(self):
+    def __iter__(self) -> "CronSim":
         return self
 
     def __next__(self) -> datetime:
