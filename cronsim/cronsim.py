@@ -333,4 +333,4 @@ class CronSim(object):
     # def explain(self):
     #     from explain import explain
 
-    #     return explain(self)
+    #     return explain(self.parts)

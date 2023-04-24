@@ -1,14 +1,10 @@
 import unittest
-from datetime import datetime
 
-from cronsim import CronSim
 from explain import explain
 
 # TODO
 # 0 0 * * *
 # At midnight every day
-
-NOW = datetime(2020, 1, 1)
 
 
 class Test(unittest.TestCase):
@@ -17,8 +13,8 @@ class Test(unittest.TestCase):
 
     def test(self):
         for expr in self.expr:
-            csobj = CronSim(expr, NOW)
-            self.assertEqual(explain(csobj), self.desc, f"Failed with {expr}")
+            parts = expr.upper().split()
+            self.assertEqual(explain(parts), self.desc, f"Failed with {expr}")
 
 
 class TestEveryEverything(Test):
@@ -173,6 +169,21 @@ class TestWeekdayList(Test):
 class TestSpecificTimeInterval(Test):
     expr = ["0-10 11 * * *"]
     desc = "Every minute from 11:00 through 11:10 every day"
+
+
+class TestNthWeekday(Test):
+    expr = ["* * * * MON#2"]
+    desc = "Every minute on the 2nd Monday of the month"
+
+
+class TestLastDayOfMonth(Test):
+    expr = ["* * L * *"]
+    desc = "Every minute on the last day of the month"
+
+
+class TestLastWeekdayOfMonth(Test):
+    expr = ["* * * * 1L"]
+    desc = "Every minute on the last Monday of the month"
 
 
 if __name__ == "__main__":

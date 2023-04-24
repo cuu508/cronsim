@@ -5,9 +5,10 @@ from dataclasses import dataclass
 
 @dataclass
 class Sequence:
-    start: int | None
-    stop: int | None
-    step: int
+    start: int | None = None
+    stop: int | None = None
+    step: int = 1
+    nth: int | None = None
 
     def is_star(self):
         return self.start is None and self.step == 1
@@ -77,12 +78,19 @@ class Field(object):
     def parse(self, value):
         for term in value.split(","):
             if term == "*":
-                yield Sequence(None, None, 1)
+                yield Sequence()
+            elif isinstance(self, Weekday) and term.endswith("L"):
+                v = self.int(term[:-1])
+                yield Sequence(start=v, stop=v, nth=-1)
+            elif "#" in term:
+                term, nth = term.split("#")
+                v = self.int(term)
+                yield Sequence(start=v, stop=v, nth=int(nth))
             elif "/" in term:
                 term, step = term.split("/")
                 step = int(step)
                 if term == "*":
-                    yield Sequence(None, None, step)
+                    yield Sequence(step=step)
                 else:
                     if "-" in term:
                         start_str, stop_str = term.split("-")
@@ -92,23 +100,25 @@ class Field(object):
                         stop = self.max_value
 
                     if start <= self.min_value and stop >= self.max_value:
-                        yield Sequence(None, None, step)
+                        yield Sequence(step=step)
                     else:
-                        yield Sequence(start, stop, step)
+                        yield Sequence(start=start, stop=stop, step=step)
             elif "-" in term:
                 start_str, stop_str = term.split("-")
                 start, stop = self.int(start_str), self.int(stop_str)
                 if start + 1 == stop:
                     # treat a 2-long sequence as two single values:
-                    yield Sequence(start, start, 1)
-                    yield Sequence(stop, stop, 1)
+                    yield Sequence(start=start, stop=start)
+                    yield Sequence(start=stop, stop=stop)
                 elif start <= self.min_value and stop >= self.max_value:
-                    yield Sequence(None, None, 1)
+                    yield Sequence()
                 else:
-                    yield Sequence(start, stop, 1)
+                    yield Sequence(start=start, stop=stop)
+            elif term == "L":
+                yield Sequence(start=0, stop=0, nth=-1)
             else:
                 v = self.int(term)
-                yield Sequence(v, v, 1)
+                yield Sequence(start=v, stop=v)
 
     def int(self, value: str):
         if value in self.symbolic:
@@ -121,6 +131,9 @@ class Field(object):
     def format_single(self, value: int):
         value = self.label(value)
         return f"{self.name} {value}"
+
+    def format_nth(self, value: int, nth: int):
+        raise NotImplementedError
 
     def format_every(self, step: int = 1):
         if step == 1:
@@ -141,6 +154,8 @@ class Field(object):
                 parts.append(self.format_every(seq.step))
             elif seq.stop != seq.start:
                 parts.append(self.format_seq(seq.start, seq.stop, seq.step))
+            elif seq.nth is not None:
+                parts.append(self.format_nth(seq.start, seq.nth))
             else:
                 parts.append(self.format_single(seq.start))
 
@@ -185,6 +200,11 @@ class Day(Field):
     min_value = 1
     max_value = 31
 
+    def format_nth(self, value, nth):
+        if value == 0 and nth == -1:
+            return "the last day of the month"
+        return super().format_nth(value, nth)
+
     def format(self):
         if self.single_value == 1:
             return "the first day of month"
@@ -226,6 +246,13 @@ class Weekday(Field):
         # "Monday" instead of "day-of-week Monday"
         return self.label(value)
 
+    def format_nth(self, value, nth):
+        label = self.label(value)
+        if nth == -1:
+            return f"the last {label} of the month"
+
+        return f"the {ordinal(nth)} {label} of the month"
+
     def format_seq(self, start: int, stop: int, step: int = 1):
         if step == 1:
             # "January through July" instead of "every month from January through July"
@@ -238,12 +265,12 @@ class Weekday(Field):
 
 
 class Translator(object):
-    def __init__(self, csobj):
-        self.minute = Minute(csobj.parts[0])
-        self.hour = Hour(csobj.parts[1])
-        self.day = Day(csobj.parts[2])
-        self.month = Month(csobj.parts[3])
-        self.dow = Weekday(csobj.parts[4])
+    def __init__(self, parts):
+        self.minute = Minute(parts[0])
+        self.hour = Hour(parts[1])
+        self.day = Day(parts[2])
+        self.month = Month(parts[3])
+        self.dow = Weekday(parts[4])
 
     def times(self):
         # at 11:00, 11:30, ...
@@ -315,3 +342,11 @@ def explain(csobj):
     result = Translator(csobj).translate()
     result = result[0].upper() + result[1:]
     return result
+
+
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) == 2:
+        parts = sys.argv[1].upper().split()
+        print(explain(parts))
