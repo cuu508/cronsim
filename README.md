@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/cuu508/cronsim/actions/workflows/pytest.yml/badge.svg)](https://github.com/cuu508/cronsim/actions/workflows/pytest.yml)
 
-Cron Sim(ulator), a cron expression parser and evaluator. Works with Python 3.7+.
+Cron Sim(ulator), a cron expression parser and evaluator. Works with Python 3.8+.
 CronSim is written for and being used in
 [Healthchecks](https://github.com/healthchecks/healthchecks/)
 (a cron job monitoring service).
