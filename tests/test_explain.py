@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import unittest
 
-from explain import explain
+from cronsim.explain import explain
 
 # TODO
 # 0 0 * * *
@@ -11,13 +13,13 @@ class Test(unittest.TestCase):
     expr = ["0 0 15 1 1"]
     desc = "At 00:00 on day-of-month 15 and on Monday in January"
 
-    def test(self):
+    def test(self) -> None:
         for expr in self.expr:
             parts = expr.upper().split()
             self.assertEqual(explain(parts), self.desc, f"Failed with {expr}")
 
 
-class TestEveryEverything(Test):
+class TestEveryMinute(Test):
     expr = [
         "* * * * *",
         "*/1 * * * *",
@@ -38,7 +40,7 @@ class TestSpecificTimes(Test):
     desc = "At 13:00, 13:30, 14:00, and 14:30 every day"
 
 
-class TestEveryMinute(Test):
+class TestEveryMinuteSingleHour(Test):
     expr = ["* 0 * * *", "0-59 0 * * *"]
     desc = "Every minute past hour 0"
 

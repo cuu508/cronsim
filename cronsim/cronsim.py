@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import calendar
 from datetime import date, datetime, time
 from datetime import timedelta as td
@@ -330,7 +332,7 @@ class CronSim(object):
 
             return self.dt
 
-    # def explain(self):
-    #     from explain import explain
+    def explain(self) -> str:
+        from cronsim.explain import explain
 
-    #     return explain(self.parts)
+        return explain(self.parts)
