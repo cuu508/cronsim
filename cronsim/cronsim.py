@@ -1,7 +1,9 @@
 import calendar
-from datetime import date, datetime, timedelta as td, time, timezone
+from datetime import date, datetime, time
+from datetime import timedelta as td
+from datetime import timezone
 from enum import IntEnum
-from typing import cast, Set, Tuple, Union
+from typing import Set, Tuple, Union, cast
 
 UTC = timezone.utc
 
@@ -130,20 +132,20 @@ class CronSim(object):
     def __init__(self, expr: str, dt: datetime):
         self.dt = dt.replace(second=0, microsecond=0)
 
-        parts = expr.upper().split()
-        if len(parts) != 5:
+        self.parts = expr.upper().split()
+        if len(self.parts) != 5:
             raise CronSimError("Wrong number of fields")
 
         # In Debian cron, if either the day-of-month or the day-of-week field
         # starts with a star, then there is an "AND" relationship between them.
         # Otherwise it's "OR".
-        self.day_and = parts[2].startswith("*") or parts[4].startswith("*")
+        self.day_and = self.parts[2].startswith("*") or self.parts[4].startswith("*")
 
-        self.minutes = cast(Set[int], Field.MINUTE.parse(parts[0]))
-        self.hours = cast(Set[int], Field.HOUR.parse(parts[1]))
-        self.days = cast(Set[int], Field.DAY.parse(parts[2]))
-        self.months = cast(Set[int], Field.MONTH.parse(parts[3]))
-        self.weekdays = Field.DOW.parse(parts[4])
+        self.minutes = cast(Set[int], Field.MINUTE.parse(self.parts[0]))
+        self.hours = cast(Set[int], Field.HOUR.parse(self.parts[1]))
+        self.days = cast(Set[int], Field.DAY.parse(self.parts[2]))
+        self.months = cast(Set[int], Field.MONTH.parse(self.parts[3]))
+        self.weekdays = Field.DOW.parse(self.parts[4])
 
         if len(self.days) and min(self.days) > 29:
             # Check if we have any month with enough days
@@ -155,7 +157,7 @@ class CronSim(object):
             # No special DST handling for UTC
             pass
         else:
-            if not parts[0].startswith("*") and not parts[1].startswith("*"):
+            if not self.parts[0].startswith("*") and not self.parts[1].startswith("*"):
                 # Will use special handling for jobs that run at specific time, or
                 # with a granularity greater than one hour (to mimic Debian cron).
                 self.fixup_tz = self.dt.tzinfo
@@ -327,3 +329,8 @@ class CronSim(object):
                 return result
 
             return self.dt
+
+    # def explain(self):
+    #     from explain import explain
+
+    #     return explain(self)

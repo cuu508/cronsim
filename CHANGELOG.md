@@ -1,6 +1,9 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## 2.4-dev - Unreleased
+- Add explain module (WIP) which describes the expression in human language
+
 ## 2.3 - 2022-09-28
 - Add type hints
 - Remove python 3.6 support (EOL)
