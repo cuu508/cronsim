@@ -15,8 +15,7 @@ class Test(unittest.TestCase):
 
     def test(self) -> None:
         for expr in self.expr:
-            parts = expr.upper().split()
-            self.assertEqual(explain(parts), self.desc, f"Failed with {expr}")
+            self.assertEqual(explain(expr), self.desc, f"Failed with {expr}")
 
 
 class TestEveryMinute(Test):

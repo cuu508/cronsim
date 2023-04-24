@@ -1,8 +1,10 @@
+from __future__ import annotations
+
+import sys
+import unittest
 from datetime import datetime, timezone
 from itertools import product
-import sys
 from typing import Iterator
-import unittest
 
 if sys.version_info >= (3, 9):
     from zoneinfo import ZoneInfo
@@ -510,6 +512,12 @@ class TestOptimizations(unittest.TestCase):
         now = NOW.replace(tzinfo=timezone.utc)
         w = CronSim("1 1 L * *", now)
         self.assertIsNone(w.fixup_tz)
+
+
+class TestExplain(unittest.TestCase):
+    def test_it_works(self) -> None:
+        result = CronSim("* * * * *", NOW).explain()
+        self.assertEqual(result, "Every minute")
 
 
 if __name__ == "__main__":

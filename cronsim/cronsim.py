@@ -333,6 +333,6 @@ class CronSim(object):
             return self.dt
 
     def explain(self) -> str:
-        from cronsim.explain import explain
+        from cronsim.explain import Expression
 
-        return explain(self.parts)
+        return Expression(self.parts).explain()

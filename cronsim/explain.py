@@ -267,7 +267,7 @@ class Weekday(Field):
         return "on " + super().__str__()
 
 
-class Translator(object):
+class Expression(object):
     def __init__(self, parts: list[str]):
         self.minute = Minute(parts[0])
         self.hour = Hour(parts[1])
@@ -334,25 +334,25 @@ class Translator(object):
 
         return " ".join(str(part) for part in parts)
 
-    def translate(self) -> str:
+    def explain(self) -> str:
         time, allow_every_day = self.translate_time()
         if date := self.translate_date():
-            return f"{time} {date}"
+            result = f"{time} {date}"
         elif allow_every_day:
-            return f"{time} every day"
+            result = f"{time} every day"
+        else:
+            result = f"{time}"
 
-        return f"{time}"
+        return result[0].upper() + result[1:]
 
 
-def explain(parts: list[str]) -> str:
-    result = Translator(parts).translate()
-    result = result[0].upper() + result[1:]
-    return result
+def explain(expr: str) -> str:
+    parts = expr.upper().split()
+    return Expression(parts).explain()
 
 
 if __name__ == "__main__":
     import sys
 
     if len(sys.argv) == 2:
-        parts = sys.argv[1].upper().split()
-        print(explain(parts))
+        print(explain(sys.argv[1]))
