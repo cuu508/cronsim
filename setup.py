@@ -1,10 +1,12 @@
 # coding: utf-8
 
+from __future__ import annotations
+
 from setuptools import find_packages, setup
 
 setup(
     name="cronsim",
-    version="2.3",
+    version="2.4-dev",
     url="https://github.com/cuu508/cronsim",
     license="BSD",
     author="Pēteris Caune",
@@ -16,7 +18,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     platforms="any",
-    python_requires=">= 3.7",
+    python_requires=">= 3.8",
     zip_safe=False,
     project_urls={
         "Changelog": "https://github.com/cuu508/cronsim/blob/main/CHANGELOG.md"
