@@ -67,11 +67,6 @@ class TestSpecificTimes(TestBase):
     0,30 13,14 * * *      | At 13:00, 13:30, 14:00, and 14:30 every day
     0,15,30,45 2 * * *    | At 2:00, 2:15, 2:30, and 2:45 every day
     0,15,30,45 2,3 * * *  | At minutes 0, 15, 30, and 45 past hours 2 and 3
-    """
-
-
-class TestSpecificTimeInterval(TestBase):
-    """
     0-10 11 * * *         | Every minute from 11:00 through 11:10 every day
     """
 
@@ -170,6 +165,13 @@ class TestSpecificDates(TestBase):
     """
     0 0 1 1 *            | At 00:00 on January 1st
     0 0 L 1 *            | At 00:00 on the last day of January
+    """
+
+
+class TestFunkySchedules(TestBase):
+    """
+    0 0 1-7 * */7        | At 00:00 on every day of month from 1 through 7 if it's on every 7th day of week
+    0 0 */100,1-7 * MON  | At 00:00 on every 100th day of month and every day of month from 1 through 7 if it's on Monday
     """
 
 

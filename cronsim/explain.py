@@ -443,6 +443,7 @@ class Expression(object):
         self.day = Day(parts[2])
         self.month = Month(parts[3])
         self.dow = Weekday(parts[4])
+        self.day_and = parts[2].startswith("*") or parts[4].startswith("*")
 
     def times(self) -> str | None:
         """Apply formatting optimizations for hours and minutes.
@@ -525,7 +526,9 @@ class Expression(object):
         if not self.day.star:
             parts.append(self.day)
         if not self.dow.star:
-            if not self.day.star:
+            if not self.day.star and self.day_and:
+                parts.append("if it's")
+            elif not self.day.star and not self.day_and:
                 parts.append("and")
             parts.append(self.dow)
         if not self.month.star:
