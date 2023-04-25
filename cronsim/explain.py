@@ -478,7 +478,7 @@ class Expression(object):
         return None
 
     def single_date(self) -> str | None:
-        """Apply formatting optimizations for hours and minutes.
+        """Apply formatting optimizations for specific dates.
 
         If month has a single value (for example, 2) and day-of-month is L, format it as
         "on the last day of February".
