@@ -205,9 +205,12 @@ class Hour(Field):
 
 
 class Day(Field):
-    name = "day-of-month"
+    name = "day of month"
     min_value = 1
     max_value = 31
+
+    def format_single(self, value: int) -> str:
+        return f"the {ordinal(value)} day of month"
 
     def format_nth(self, value: int, nth: int) -> str:
         if nth == -1:
@@ -218,8 +221,8 @@ class Day(Field):
         if self.single_value == 1:
             return "the first day of month"
         if self.all_singles and len(self.parsed) > 1:
-            labels = [self.label(v) for v in self.singles()]
-            return f"day-of-month {join(labels)}"
+            labels = [ordinal(v) for v in self.singles()]
+            return f"the {join(labels)} day of month"
         return super().format()
 
     def __str__(self) -> str:

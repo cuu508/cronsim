@@ -23,15 +23,6 @@ class TestBase(unittest.TestCase):
             self.assertEqual(explain(expr), desc, expr)
 
 
-class Test(unittest.TestCase):
-    expr = ["0 0 15 1 1"]
-    desc = "At 00:00 on day-of-month 15 and on Monday in January"
-
-    def test(self) -> None:
-        for expr in self.expr:
-            self.assertEqual(explain(expr), self.desc, f"Failed with {expr}")
-
-
 class TestEveryMinute(TestBase):
     """
     * * * * *        | Every minute
@@ -107,15 +98,17 @@ class TestHourField(TestBase):
 class TestDayField(TestBase):
     """
     0 0 1 * *             | At 00:00 on the first day of month
-    0 0 1,1 * *             | At 00:00 on the first day of month
-    0 0 1,15 * *          | At 00:00 on day-of-month 1 and 15
-    0 0 1-15 * *          | At 00:00 on every day-of-month from 1 through 15
-    0 0 1-15,30 * *       | At 00:00 on every day-of-month from 1 through 15 and day-of-month 30
-    0 0 */5 * *           | At 00:00 on every 5th day-of-month
-    0 0 1/5 * *           | At 00:00 on every 5th day-of-month
-    0 0 2/5 * *           | At 00:00 on every 5th day-of-month from 2 through 31
-    0 0 2-10/5 * *        | At 00:00 on every 5th day-of-month from 2 through 10
-    0 0 1-5,*/5 * *       | At 00:00 on every day-of-month from 1 through 5 and every 5th day-of-month
+    0 0 1,1 * *           | At 00:00 on the first day of month
+    0 0 1,15 * *          | At 00:00 on the 1st and 15th day of month
+    0 0 1,3,5 * *         | At 00:00 on the 1st, 3rd, and 5th day of month
+    0 0 1,3,10-20 * *     | At 00:00 on the 1st day of month, the 3rd day of month, and every day of month from 10 through 20
+    0 0 1-15 * *          | At 00:00 on every day of month from 1 through 15
+    0 0 1-15,30 * *       | At 00:00 on every day of month from 1 through 15 and the 30th day of month
+    0 0 */5 * *           | At 00:00 on every 5th day of month
+    0 0 1/5 * *           | At 00:00 on every 5th day of month
+    0 0 2/5 * *           | At 00:00 on every 5th day of month from 2 through 31
+    0 0 2-10/5 * *        | At 00:00 on every 5th day of month from 2 through 10
+    0 0 1-5,*/5 * *       | At 00:00 on every day of month from 1 through 5 and every 5th day of month
     0 0 L * *             | At 00:00 on the last day of the month
     """
 
@@ -123,11 +116,11 @@ class TestDayField(TestBase):
 class TestMonthField(TestBase):
     """
     0 0 * 1 *             | At 00:00 every day in January
-    0 0 * 1,1 *             | At 00:00 every day in January
+    0 0 * 1,1 *           | At 00:00 every day in January
     0 0 * JAN *           | At 00:00 every day in January
     0 0 * 1-2 *           | At 00:00 every day in January and February
     0 0 * JAN-FEB *       | At 00:00 every day in January and February
-    0 0 15 JAN-FEB *      | At 00:00 on day-of-month 15 in January and February
+    0 0 15 JAN-FEB *      | At 00:00 on the 15th day of month in January and February
     0 0 * 1-3 *           | At 00:00 in every month from January through March
     0 0 * */2 *           | At 00:00 in every 2nd month
     0 0 * 1/2 *           | At 00:00 in every 2nd month
@@ -141,7 +134,7 @@ class TestMonthField(TestBase):
 class TestWeekdayField(TestBase):
     """
     0 0 * * 1             | At 00:00 on Monday
-    0 0 * * 1,1             | At 00:00 on Monday
+    0 0 * * 1,1           | At 00:00 on Monday
     0 0 * * MON           | At 00:00 on Monday
     0 0 * * 1#2           | At 00:00 on the 2nd Monday of the month
     0 0 * * MON#2         | At 00:00 on the 2nd Monday of the month
@@ -161,9 +154,9 @@ class TestWeekdayField(TestBase):
 
 class TestDateCombinations(TestBase):
     """
-    0 0 15 1 1            | At 00:00 on day-of-month 15 and on Monday in January
+    0 0 15 1 1            | At 00:00 on the 15th day of month and on Monday in January
     0 0 * 1 1             | At 00:00 on Monday in January
-    0 0 15 JAN-FEB *      | At 00:00 on day-of-month 15 in January and February
+    0 0 15 JAN-FEB *      | At 00:00 on the 15th day of month in January and February
     0 0 1 JAN-FEB *       | At 00:00 on the first day of month in January and February
     """
 
