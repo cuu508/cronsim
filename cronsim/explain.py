@@ -12,13 +12,24 @@ class Sequence:
     nth: int | None = None
 
     def is_star(self) -> bool:
+        """Return True if this sequence describes a wildcard."""
         return self.start is None and self.step == 1
 
     def is_single(self) -> bool:
+        """Return True if this sequence describes a a single, specific value."""
         return self.start is not None and self.start == self.stop
 
 
 def join(l: list[str]) -> str:
+    """Join together strings using commas and 'and' as separators.
+
+    >>> join(["a"])
+    'a'
+    >>> join(["a", "b"])
+    'a and b'
+    >>> join(["a", "b", "c"])
+    'a, b, and c'
+    """
     if len(l) == 1:
         return l[0]
 
@@ -30,6 +41,13 @@ def join(l: list[str]) -> str:
 
 
 def ordinal(x: int) -> str:
+    """Format integer as an ordinal number.
+
+    >>> ordinal(1)
+    '1st'
+    >>> ordinal(15)
+    '15th'
+    """
     if x == 1:
         return "1st"
     if x == 2:
@@ -40,6 +58,13 @@ def ordinal(x: int) -> str:
 
 
 def format_time(h: int, m: int) -> str:
+    """Format hours and minutes as a 24-hour time.
+
+    >>> format_time(0, 0)
+    '00:00'
+    >>> format_time(1, 23)
+    '1:23'
+    """
     if h == 0:
         return f"00:{m:02d}"
 
@@ -76,6 +101,7 @@ class Field(object):
         self.all_singles = all(seq.is_single() for seq in self.parsed)
 
     def parse(self, value: str) -> Generator[Sequence, None, None]:
+        """Parse a single field of a cron expression into Sequence objects."""
         for term in value.split(","):
             if term == "*":
                 yield Sequence()
@@ -121,28 +147,64 @@ class Field(object):
                 yield Sequence(start=v, stop=v)
 
     def _int(self, value: str) -> int:
+        """Convert a value from a cron expression to an integer.
+
+        For month and weekday fields, this takes care of converting JAN, FEB, ...
+        and MON, TUE, ...
+        """
         if value in self.symbolic:
             return self.symbolic.index(value)
         return int(value)
 
     def singles(self) -> list[int]:
+        """Return a list only the single values in this field."""
         return [seq.start for seq in self.parsed if isinstance(seq.start, int)]
 
     def label(self, idx: int) -> str:
+        """Convert an integer value to a string for display.
+
+        >>> label(1)
+        '1'
+        """
         return str(idx)
 
     def format_single(self, value: int) -> str:
+        """Format a single value for display.
+
+        >>> format_single(1)
+        'minute 1'
+        """
         return f"{self.name} {self.label(value)}"
 
     def format_nth(self, value: int, nth: int) -> str:
+        """Format nth-weekday-of-month and L values.
+
+        Implemented in Month and Weekday subclasses.
+        """
         raise NotImplementedError
 
     def format_every(self, step: int = 1) -> str:
+        """Format wildcard and wildcard-with-step values.
+
+        >>> format_every(1)
+        'every minute'
+
+        >>> format_every(5)
+        'every 5th minute'
+        """
         if step == 1:
             return f"every {self.name}"
         return f"every {ordinal(step)} {self.name}"
 
     def format_seq(self, start: int, stop: int, step: int = 1) -> str:
+        """Format a sequence.
+
+        >>> format_seq(1, 10)
+        'every minute from 1 through 10'
+
+        >>> format_seq(1, 10, 2)
+        'every 2nd minute from 1 through 10'
+        """
         start_str = self.label(start)
         stop_str = self.label(stop)
         if step == 1:
@@ -150,6 +212,7 @@ class Field(object):
         return f"every {ordinal(step)} {self.name} from {start_str} through {stop_str}"
 
     def format(self) -> str:
+        """Format every component of this field, and join them together."""
         parts = []
         for seq in self.parsed:
             if seq.start is None:
@@ -165,6 +228,10 @@ class Field(object):
         return join(parts)
 
     def __str__(self) -> str:
+        """Return a human-friendly representation of this field.
+
+        Subclasses can override this method to add prepositions ("at", "on", "in").
+        """
         return self.format()
 
 
@@ -174,12 +241,26 @@ class Minute(Field):
     max_value = 59
 
     def format(self) -> str:
+        """Format the minute field.
+
+        This method adds special handling when all values are single values. Instead
+        of "minute 1, minute 3, and minute 5", it produces "minutes 1, 3, and 5".
+        """
         if self.all_singles and len(self.parsed) > 1:
             labels = [self.label(v) for v in self.singles()]
             return f"minutes {join(labels)}"
         return super().format()
 
     def __str__(self) -> str:
+        """Return a human-friendly representation of the minute field.
+
+        This method adds the 'at' preposition to the formatted string if the field has
+        any single values.
+
+        For example, if the field has a single range (1-5), the result will be
+        "every minute from 1 through 5". But if the field also has a single field
+        (1-5,10), the result will be "at every minute from 1 through 5 and minute 10".
+        """
         result = super().__str__()
         if self.any_singles:
             return "at " + result
@@ -193,12 +274,25 @@ class Hour(Field):
     max_value = 23
 
     def format(self) -> str:
+        """Format the hour field.
+
+        This method adds special handling when all values are single values. Instead
+        of "hour 1, hour 3, and hour 5", it produces "hours 1, 3, and 5".
+        """
         if self.all_singles and len(self.parsed) > 1:
             labels = [self.label(v) for v in self.singles()]
             return f"hours {join(labels)}"
         return super().format()
 
     def __str__(self) -> str:
+        """Return a human-friendly representation of the minute field.
+
+        This method adds the 'past' preposition to the formatted string unless
+        the hour field is a wildcard.
+
+        For example, if the hour field has a single value (5), the result will
+        be "past hour 5".
+        """
         if self.star:
             return "every hour"
         return "past " + super().__str__()
@@ -210,14 +304,31 @@ class Day(Field):
     max_value = 31
 
     def format_single(self, value: int) -> str:
+        """Format a single day-of-month value for display.
+
+        >>> format_single(2)
+        'the 2nd day of month'
+        """
         return f"the {ordinal(value)} day of month"
 
     def format_nth(self, value: int, nth: int) -> str:
+        """Format the last day of month (L) value.
+
+        >>> format_nth(-1)
+        'the last day of the month'
+        """
         if nth == -1:
             return "the last day of the month"
         return super().format_nth(value, nth)
 
     def format(self) -> str:
+        """Format the day field.
+
+        This method adds special handling for the first day of the month,
+        and for the case when all values are single values. For example, instead of
+        "the 1st day of month, the 3rd day of month, and the 5th day of month"
+        it produces "the 1st, 3rd, and 5th day of month".
+        """
         if self.single_value == 1:
             return "the first day of month"
         if self.all_singles and len(self.parsed) > 1:
@@ -226,6 +337,10 @@ class Day(Field):
         return super().format()
 
     def __str__(self) -> str:
+        """Return a human-friendly representation of the day of month field.
+
+        This method unconditionally adds the 'on' preposition.
+        """
         return "on " + super().__str__()
 
 
@@ -237,13 +352,26 @@ class Month(Field):
     labels = "_ January February March April May June July August September October November December".split()
 
     def label(self, idx: int) -> str:
+        """Convert an integer value to a month name.
+
+        >>> label(1)
+        'January'
+        """
         return self.labels[idx]
 
     def format_single(self, value: int) -> str:
-        # "January" instead of "month January"
+        """Format a single month value for display.
+
+        >>> format_single(2)
+        'February'
+        """
         return self.label(value)
 
     def __str__(self) -> str:
+        """Return a human-friendly representation of the month field.
+
+        This method unconditionally adds the 'in' preposition.
+        """
         return "in " + super().__str__()
 
 
@@ -255,13 +383,29 @@ class Weekday(Field):
     labels = "Sunday Monday Tuesday Wednesday Thursday Friday Saturday Sunday".split()
 
     def label(self, idx: int) -> str:
+        """Convert an integer value to a day of week name.
+
+        >>> label(1)
+        'Monday'
+        """
         return self.labels[idx]
 
     def format_single(self, value: int) -> str:
-        # "Monday" instead of "day-of-week Monday"
+        """Format a single month value for display.
+
+        >>> format_single(2)
+        'Tuesday'
+        """
         return self.label(value)
 
     def format_nth(self, value: int, nth: int) -> str:
+        """Format the nth-weekday-of-month value.
+
+        >>> format_nth(2, -1)
+        'the last Tuesday of the month'
+        >>> format_nth(2, 4)
+        'the 4th Tuesday of the month'
+        """
         label = self.label(value)
         if nth == -1:
             return f"the last {label} of the month"
@@ -269,6 +413,14 @@ class Weekday(Field):
         return f"the {ordinal(nth)} {label} of the month"
 
     def format_seq(self, start: int, stop: int, step: int = 1) -> str:
+        """Format a sequence of weekdays.
+
+        >>> format_seq(1, 3)
+        'Monday through Wednesday'
+        >>> format_seq(1, 7, 2)
+        'evary 2nd day of week from Monday through Sunday'
+        """
+
         if step == 1:
             # "Monday through Friday"
             # instead of "every day of week from Monday through Friday"
@@ -277,6 +429,10 @@ class Weekday(Field):
         return super().format_seq(start, stop, step)
 
     def __str__(self) -> str:
+        """Return a human-friendly representation of the month field.
+
+        This method unconditionally adds the 'on' preposition.
+        """
         return "on " + super().__str__()
 
 
@@ -289,6 +445,16 @@ class Expression(object):
         self.dow = Weekday(parts[4])
 
     def times(self) -> str | None:
+        """Apply formatting optimizations for hours and minutes.
+
+        If both hours and minutes contain only a few single values, format them
+        as "at HH:MM, HH:MM, HH:MM, and HH:MM"
+
+        If hours have a single value, and minutes have a single sequence with step 1,
+        format them as "every minute from HH:MM through HH:MM".
+
+        If no special optimizations apply, return None.
+        """
         # at 11:00, 11:30, ...
         if self.hour.all_singles and self.minute.all_singles:
             minute_terms, hour_terms = self.minute.singles(), self.hour.singles()
@@ -312,6 +478,17 @@ class Expression(object):
         return None
 
     def single_date(self) -> str | None:
+        """Apply formatting optimizations for hours and minutes.
+
+        If month has a single value (for example, 2) and day-of-month is L, format it as
+        "on the last day of February".
+
+        If month and day-of-month each have a single value
+        (for example, month 2 and day-of-month 1), format them as
+        "February 1st".
+
+        If no special optimizations apply, return None.
+        """
         if self.month.single_value and self.dow.star:
             if self.day.single_value == -1:
                 return f"on the last day of {self.month.format()}"
@@ -322,6 +499,7 @@ class Expression(object):
         return None
 
     def translate_time(self) -> tuple[str, bool]:
+        """Convert the minute and hour fields to text."""
         if self.hour.star:
             if self.minute.star:
                 return "every minute", False
@@ -335,6 +513,7 @@ class Expression(object):
         return f"{self.minute} {self.hour}", False
 
     def translate_date(self) -> str:
+        """Convert the day, month, and weekday fields to text."""
         if single_date := self.single_date():
             return single_date
 
@@ -355,6 +534,7 @@ class Expression(object):
         return " ".join(str(part) for part in parts)
 
     def explain(self) -> str:
+        """Convert the full expression to text."""
         time, allow_every_day = self.translate_time()
         if date := self.translate_date():
             result = f"{time} {date}"
@@ -367,10 +547,17 @@ class Expression(object):
 
 
 def explain(expr: str) -> str:
+    """Convert the given cron expression to human-friendly description.
+
+    >>> explain("0 0 15 JAN-FEB *")
+    'At 00:00 on the 15th day of month in January and February'
+    """
     parts = expr.upper().split()
     return Expression(parts).explain()
 
 
+# For quick testing, you can run this script from shell like so:
+# python explain.py "0 0 15 JAN-FEB *"
 if __name__ == "__main__":
     import sys
 
