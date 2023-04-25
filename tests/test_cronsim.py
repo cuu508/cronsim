@@ -249,6 +249,14 @@ class TestIterator(unittest.TestCase):
         with self.assertRaises(StopIteration):
             next(it)
 
+    def test_it_handles_every_x_weekdays(self) -> None:
+        # "every 3rd weekday" means "every 3rd weekday starting from Sunday"
+        it = CronSim("1 1 * * */3", NOW)
+        self.assertEqual(next(it).isoformat(), "2020-01-01T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-01-04T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-01-05T01:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-01-08T01:01:00")
+
 
 class TestDstTransitions(unittest.TestCase):
     tz = ZoneInfo("Europe/Riga")
