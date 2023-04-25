@@ -94,8 +94,8 @@ class TestHourField(TestBase):
 
 class TestDayField(TestBase):
     """
-    0 0 1 * *             | At 00:00 on the first day of month
-    0 0 1,1 * *           | At 00:00 on the first day of month
+    0 0 1 * *             | At 00:00 on the 1st day of every month
+    0 0 1,1 * *           | At 00:00 on the 1st day of every month
     0 0 1,15 * *          | At 00:00 on the 1st and 15th day of month
     0 0 1,3,5 * *         | At 00:00 on the 1st, 3rd, and 5th day of month
     0 0 1,3,10-20 * *     | At 00:00 on the 1st day of month, the 3rd day of month, and every day of month from 10 through 20
@@ -106,7 +106,7 @@ class TestDayField(TestBase):
     0 0 2/5 * *           | At 00:00 on every 5th day of month from 2 through 31
     0 0 2-10/5 * *        | At 00:00 on every 5th day of month from 2 through 10
     0 0 1-5,*/5 * *       | At 00:00 on every day of month from 1 through 5 and every 5th day of month
-    0 0 L * *             | At 00:00 on the last day of the month
+    0 0 L * *             | At 00:00 on the last day of every month
     """
 
 
@@ -117,7 +117,7 @@ class TestMonthField(TestBase):
     0 0 * JAN *           | At 00:00 every day in January
     0 0 * 1-2 *           | At 00:00 every day in January and February
     0 0 * JAN-FEB *       | At 00:00 every day in January and February
-    0 0 15 JAN-FEB *      | At 00:00 on the 15th day of month in January and February
+    0 0 15 JAN-FEB *      | At 00:00 on the 15th day of January and February
     0 0 * 1-3 *           | At 00:00 in every month from January through March
     0 0 * */2 *           | At 00:00 in every 2nd month
     0 0 * 1/2 *           | At 00:00 in every 2nd month
@@ -125,6 +125,23 @@ class TestMonthField(TestBase):
     0 0 * 1-6/2 *         | At 00:00 in every 2nd month from January through June
     0 0 * 1-2,12 *        | At 00:00 every day in January, February, and December
     0 0 * 1-3,12 *        | At 00:00 in every month from January through March and December
+    """
+
+
+class TestSingleDateInMonth(TestBase):
+    """
+    0 0 1 1-2 *           | At 00:00 on the 1st day of January and February
+    0 0 1 JAN-FEB *       | At 00:00 on the 1st day of January and February
+    0 0 1 1-3 *           | At 00:00 on the 1st day of every month from January through March
+    0 0 1 */2 *           | At 00:00 on the 1st day of every 2nd month
+    0 0 1 1/2 *           | At 00:00 on the 1st day of every 2nd month
+    0 0 1 3/2 *           | At 00:00 on the 1st day of every 2nd month from March through December
+    0 0 1 1-6/2 *         | At 00:00 on the 1st day of every 2nd month from January through June
+    0 0 1 1-2,12 *        | At 00:00 on the 1st day of January, February, and December
+    0 0 1 1-3,12 *        | At 00:00 on the 1st day of every month from January through March and December
+    0 0 1 1 1             | At 00:00 on the 1st day of month and on Monday in January
+    0 0 1 1 1-5           | At 00:00 on the 1st day of month and on Monday through Friday in January
+    0 0 1-2 1 1-5         | At 00:00 on the 1st and 2nd day of month and on Monday through Friday in January
     """
 
 
@@ -156,9 +173,11 @@ class TestDateCombinations(TestBase):
     """
     0 0 15 1 1            | At 00:00 on the 15th day of month and on Monday in January
     0 0 * 1 1             | At 00:00 on Monday in January
-    0 0 15 JAN-FEB *      | At 00:00 on the 15th day of month in January and February
-    0 0 1 JAN-FEB *       | At 00:00 on the first day of month in January and February
+    0 0 15 JAN-FEB *      | At 00:00 on the 15th day of January and February
+    0 0 1 JAN-FEB *       | At 00:00 on the 1st day of January and February
     """
+
+    # FIXME: 0 0 1,2 JAN-FEB *
 
 
 class TestSpecificDates(TestBase):

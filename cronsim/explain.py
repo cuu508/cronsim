@@ -329,8 +329,6 @@ class Day(Field):
         "the 1st day of month, the 3rd day of month, and the 5th day of month"
         it produces "the 1st, 3rd, and 5th day of month".
         """
-        if self.single_value == 1:
-            return "the first day of month"
         if self.all_singles and len(self.parsed) > 1:
             labels = [ordinal(v) for v in self.singles()]
             return f"the {join(labels)} day of month"
@@ -481,21 +479,28 @@ class Expression(object):
     def single_date(self) -> str | None:
         """Apply formatting optimizations for specific dates.
 
-        If month has a single value (for example, 2) and day-of-month is L, format it as
-        "on the last day of February".
+        If day-of-month is L, format it as
+        "on the last day of <month description here>".
 
         If month and day-of-month each have a single value
         (for example, month 2 and day-of-month 1), format them as
         "February 1st".
 
+        If day-of-month has a single value (for example, 2),
+        format it as "on the 2nd day of <month description here>".
+
         If no special optimizations apply, return None.
         """
-        if self.month.single_value and self.dow.star:
+
+        if self.dow.star:
             if self.day.single_value == -1:
                 return f"on the last day of {self.month.format()}"
-            if self.day.single_value:
+            if self.month.single_value and self.day.single_value:
                 date_ord = ordinal(self.day.single_value)
                 return f"on {self.month.format()} {date_ord}"
+            if self.day.single_value:
+                date_ord = ordinal(self.day.single_value)
+                return f"on the {date_ord} day of {self.month.format()}"
 
         return None
 
