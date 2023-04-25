@@ -248,7 +248,7 @@ class Month(Field):
 
 
 class Weekday(Field):
-    name = "day-of-week"
+    name = "day of week"
     min_value = 0
     max_value = 7
     symbolic = "SUN MON TUE WED THU FRI SAT SUN".split()
@@ -270,7 +270,8 @@ class Weekday(Field):
 
     def format_seq(self, start: int, stop: int, step: int = 1) -> str:
         if step == 1:
-            # "January through July" instead of "every month from January through July"
+            # "Monday through Friday"
+            # instead of "every day of week from Monday through Friday"
             return f"{self.label(start)} through {self.label(stop)}"
 
         return super().format_seq(start, stop, step)

@@ -20,7 +20,8 @@ class TestBase(unittest.TestCase):
                 continue
             expr, desc = line.split("|")
             expr, desc = expr.strip(), desc.strip()
-            self.assertEqual(explain(expr), desc, expr)
+            with self.subTest():
+                self.assertEqual(explain(expr), desc, expr)
 
 
 class TestEveryMinute(TestBase):
@@ -48,6 +49,7 @@ class TestMinuteField(TestBase):
     0/5 * * * *           | Every 5th minute of every hour
     */5,*/5 * * * *       | Every 5th minute of every hour
     0-30/5 * * * *        | Every 5th minute from 0 through 30 of every hour
+    0-59/5 * * * *        | Every 5th minute of every hour
     1/5 * * * *           | Every 5th minute from 1 through 59 of every hour
     1,*/5 * * * *         | At minute 1 and every 5th minute of every hour
     */5,1 * * * *         | At every 5th minute and minute 1 of every hour
@@ -145,11 +147,14 @@ class TestWeekdayField(TestBase):
     0 0 * * 1-3           | At 00:00 on Monday through Wednesday
     0 0 * * MON-WED       | At 00:00 on Monday through Wednesday
     0 0 * * 1-3,5         | At 00:00 on Monday through Wednesday and Friday
-    0 0 * * */2           | At 00:00 on every 2nd day-of-week
-    0 0 * * 2/2           | At 00:00 on every 2nd day-of-week from Tuesday through Sunday
+    0 0 * * */2           | At 00:00 on every 2nd day of week
+    0 0 * * 0/2           | At 00:00 on every 2nd day of week
+    0 0 * * 1/2           | At 00:00 on every 2nd day of week from Monday through Sunday
+    0 0 * * 1-7           | At 00:00 on Monday through Sunday
+    0 0 * * 1-7/1         | At 00:00 on Monday through Sunday
+    0 0 * * 0-6           | At 00:00 on Sunday through Saturday
+    0 0 * * 0-6/1         | At 00:00 on Sunday through Saturday
     """
-
-    # FIXME: test 0 0 * * 2/2
 
 
 class TestDateCombinations(TestBase):
