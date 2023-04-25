@@ -518,14 +518,15 @@ class Expression(object):
 
         return f"{self.minute} {self.hour}", False
 
-    def translate_date(self) -> str:
+    def translate_date(self, allow_every_day: bool) -> str:
         """Convert the day, month, and weekday fields to text."""
         if single_date := self.single_date():
             return single_date
 
-        if self.day.star and self.dow.star and self.month.all_singles:
-            # At ... every day in January
-            return f"every day {self.month}"
+        if allow_every_day:
+            if self.day.star and self.dow.star and self.month.all_singles:
+                # At ... every day in January
+                return f"every day {self.month}"
 
         parts: list[Field | str] = []
         if not self.day.star:
@@ -544,7 +545,7 @@ class Expression(object):
     def explain(self) -> str:
         """Convert the full expression to text."""
         time, allow_every_day = self.translate_time()
-        if date := self.translate_date():
+        if date := self.translate_date(allow_every_day):
             result = f"{time} {date}"
         elif allow_every_day:
             result = f"{time} every day"

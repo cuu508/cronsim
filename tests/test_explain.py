@@ -11,7 +11,7 @@ from cronsim.explain import explain
 
 class TestBase(unittest.TestCase):
     """
-    * * * * * | Every minute
+    * * * 1 *             | Every minute in January
     """
 
     def test(self) -> None:
@@ -60,17 +60,6 @@ class TestMinuteField(TestBase):
     """
 
 
-class TestSpecificTimes(TestBase):
-    """
-    0 0 * * *             | At 00:00 every day
-    0 2 * * *             | At 2:00 every day
-    0,30 13,14 * * *      | At 13:00, 13:30, 14:00, and 14:30 every day
-    0,15,30,45 2 * * *    | At 2:00, 2:15, 2:30, and 2:45 every day
-    0,15,30,45 2,3 * * *  | At minutes 0, 15, 30, and 45 past hours 2 and 3
-    0-10 11 * * *         | Every minute from 11:00 through 11:10 every day
-    """
-
-
 class TestHourField(TestBase):
     """
     * 0 * * *             | Every minute past hour 0
@@ -89,6 +78,9 @@ class TestHourField(TestBase):
     * 0-7,18-23 * * *     | Every minute past every hour from 0 through 7 and every hour from 18 through 23
     * 1,9-12,*/4 * * *    | Every minute past hour 1, every hour from 9 through 12, and every 4th hour
     0 */3 * * *           | At minute 0 past every 3rd hour
+    0 * * * *             | At the start of every hour
+    0 */1 * * *           | At the start of every hour
+    0 0/1 * * *           | At the start of every hour
     """
 
 
@@ -112,6 +104,8 @@ class TestDayField(TestBase):
 
 class TestMonthField(TestBase):
     """
+    * * * 1 *             | Every minute in January
+    * * 15 JAN-FEB *      | Every minute on the 15th day of January and February
     0 0 * 1 *             | At 00:00 every day in January
     0 0 * 1,1 *           | At 00:00 every day in January
     0 0 * JAN *           | At 00:00 every day in January
@@ -171,11 +165,26 @@ class TestWeekdayField(TestBase):
 
 class TestDateCombinations(TestBase):
     """
+    0 0 15 * *            | At 00:00 on the 15th day of every month
     0 0 15 1 1            | At 00:00 on the 15th day of month and on Monday in January
     0 0 * 1 1             | At 00:00 on Monday in January
+    0 0 * JAN-FEB *       | At 00:00 every day in January and February
+    0 0 * JAN-MAR *       | At 00:00 in every month from January through March
     0 0 15 JAN-FEB *      | At 00:00 on the 15th day of January and February
     0 0 1 JAN-FEB *       | At 00:00 on the 1st day of January and February
     0 0 1,2 JAN-FEB *     | At 00:00 on the 1st and 2nd day of month in January and February
+    0 0 * * 1-5           | At 00:00 on Monday through Friday
+    """
+
+
+class TestSpecificTimes(TestBase):
+    """
+    0 0 * * *             | At 00:00 every day
+    0 2 * * *             | At 2:00 every day
+    0,30 13,14 * * *      | At 13:00, 13:30, 14:00, and 14:30 every day
+    0,15,30,45 2 * * *    | At 2:00, 2:15, 2:30, and 2:45 every day
+    0,15,30,45 2,3 * * *  | At minutes 0, 15, 30, and 45 past hours 2 and 3
+    0-10 11 * * *         | Every minute from 11:00 through 11:10 every day
     """
 
 
