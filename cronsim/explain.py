@@ -324,8 +324,8 @@ class Day(Field):
     def format(self) -> str:
         """Format the day field.
 
-        This method adds special handling for the first day of the month,
-        and for the case when all values are single values. For example, instead of
+        This method adds special handling for the case when
+        all values are single values. For example, instead of
         "the 1st day of month, the 3rd day of month, and the 5th day of month"
         it produces "the 1st, 3rd, and 5th day of month".
         """
