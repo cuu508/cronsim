@@ -115,7 +115,7 @@ class Field(object):
                 else:
                     yield Sequence(start=start, stop=stop)
             elif term == "L":
-                yield Sequence(start=0, stop=0, nth=-1)
+                yield Sequence(start=-1, stop=-1, nth=-1)
             else:
                 v = self._int(term)
                 yield Sequence(start=v, stop=v)
@@ -311,9 +311,12 @@ class Expression(object):
         return None
 
     def single_date(self) -> str | None:
-        if self.day.single_value and self.month.single_value and self.dow.star:
-            date_ord = ordinal(self.day.single_value)
-            return f"on {self.month.format()} {date_ord}"
+        if self.month.single_value and self.dow.star:
+            if self.day.single_value == -1:
+                return f"on the last day of {self.month.format()}"
+            if self.day.single_value:
+                date_ord = ordinal(self.day.single_value)
+                return f"on {self.month.format()} {date_ord}"
 
         return None
 
