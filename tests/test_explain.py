@@ -175,9 +175,8 @@ class TestDateCombinations(TestBase):
     0 0 * 1 1             | At 00:00 on Monday in January
     0 0 15 JAN-FEB *      | At 00:00 on the 15th day of January and February
     0 0 1 JAN-FEB *       | At 00:00 on the 1st day of January and February
+    0 0 1,2 JAN-FEB *     | At 00:00 on the 1st and 2nd day of month in January and February
     """
-
-    # FIXME: 0 0 1,2 JAN-FEB *
 
 
 class TestSpecificDates(TestBase):
