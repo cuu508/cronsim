@@ -25,7 +25,7 @@ def join(l: list[str]) -> str:
     if len(l) == 2:
         return f"{l[0]} and {l[1]}"
 
-    head = ", ".join(map(str, l[:-1]))
+    head = ", ".join(l[:-1])
     return f"{head}, and {l[-1]}"
 
 
@@ -192,6 +192,12 @@ class Hour(Field):
     min_value = 0
     max_value = 23
 
+    def format(self) -> str:
+        if self.all_singles and len(self.parsed) > 1:
+            labels = [self.label(v) for v in self.singles()]
+            return f"hours {join(labels)}"
+        return super().format()
+
     def __str__(self) -> str:
         if self.star:
             return "every hour"
@@ -211,6 +217,9 @@ class Day(Field):
     def format(self) -> str:
         if self.single_value == 1:
             return "the first day of month"
+        if self.all_singles and len(self.parsed) > 1:
+            labels = [self.label(v) for v in self.singles()]
+            return f"day-of-month {join(labels)}"
         return super().format()
 
     def __str__(self) -> str:
@@ -321,6 +330,10 @@ class Expression(object):
     def translate_date(self) -> str:
         if single_date := self.single_date():
             return single_date
+
+        if self.day.star and self.dow.star and self.month.all_singles:
+            # At ... every day in January
+            return f"every day {self.month}"
 
         parts: list[Field | str] = []
         if not self.day.star:
