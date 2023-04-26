@@ -101,6 +101,7 @@ class TestDayField(TestBase):
     0 0 2-10/5 * *        | At 00:00 on every 5th day of month from 2 through 10
     0 0 1-5,*/5 * *       | At 00:00 on every day of month from 1 through 5 and every 5th day of month
     0 0 L * *             | At 00:00 on the last day of every month
+    0 0 L/2 * *           | At 00:00 on the last day of every month
     """
 
 

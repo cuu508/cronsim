@@ -117,6 +117,8 @@ class Field(object):
                 step = int(step_str)
                 if term == "*":
                     yield Sequence(step=step)
+                elif term == "L":
+                    yield Sequence(start=-1, stop=-1, nth=-1)
                 else:
                     if "-" in term:
                         start_str, stop_str = term.split("-")
