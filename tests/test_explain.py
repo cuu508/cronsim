@@ -4,10 +4,6 @@ import unittest
 
 from cronsim.explain import explain
 
-# TODO
-# 0 0 * * *
-# At midnight every day
-
 
 class TestBase(unittest.TestCase):
     """
