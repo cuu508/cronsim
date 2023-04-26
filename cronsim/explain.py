@@ -443,7 +443,7 @@ class Expression(object):
         self.dow = Weekday(parts[4])
         self.day_and = parts[2].startswith("*") or parts[4].startswith("*")
 
-    def optimized_times(self) -> str | None:
+    def optimized_times(self) -> tuple[str, bool] | None:
         """Apply formatting optimizations for hours and minutes.
 
         If both hours and minutes contain only a few single values, format them
@@ -473,17 +473,19 @@ class Expression(object):
         if self.hour.single_value and len(self.minute.parsed) == 1:
             seq = self.minute.parsed[0]
             if seq.start is not None and seq.stop is not None and seq.step == 1:
-                start = format_time(self.hour.single_value, seq.start)
-                stop = format_time(self.hour.single_value, seq.stop)
-                return f"every minute from {start} through {stop}", False
+                hhmm1 = format_time(self.hour.single_value, seq.start)
+                hhmm2 = format_time(self.hour.single_value, seq.stop)
+                return f"every minute from {hhmm1} through {hhmm2}", False
 
+        # every minute from 9:00 through 17:59
         if len(self.hour.parsed) == 1 and len(self.minute.parsed) == 1:
-            hours = self.hour.parsed[0]
-            minutes = self.minute.parsed[0]
-            if hours.step == 1 and minutes.start is None:
-                start = format_time(hours.start, 0)
-                stop = format_time(hours.stop, 59)
-                return f"{self.minute} from {start} through {stop}", False
+            mseq = self.minute.parsed[0]
+            if mseq.start is None:
+                hseq = self.hour.parsed[0]
+                if hseq.start is not None and hseq.stop is not None and hseq.step == 1:
+                    hhmm1 = format_time(hseq.start, 0)
+                    hhmm2 = format_time(hseq.stop, 59)
+                    return f"{self.minute} from {hhmm1} through {hhmm2}", False
 
         return None
 
