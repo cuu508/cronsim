@@ -289,14 +289,9 @@ class Hour(Field):
     def __str__(self) -> str:
         """Return a human-friendly representation of the minute field.
 
-        This method adds the 'past' preposition to the formatted string unless
-        the hour field is a wildcard.
-
-        For example, if the hour field has a single value (5), the result will
-        be "past hour 5".
+        This method adds the 'past' preposition to the formatted string. For example,
+        if the hour field has a single value (5), the result will be "past hour 5".
         """
-        if self.star:
-            return "every hour"
         return "past " + super().__str__()
 
 
