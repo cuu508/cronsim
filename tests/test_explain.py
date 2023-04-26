@@ -214,6 +214,9 @@ class TestSmoke(TestBase):
     """
     30-59/5 2,4,6 1-10 1-3 * | Every 5th minute from 30 through 59 past hours 2, 4, and 6 on every day of month from 1 through 10 in every month from January through March
     0/15 9-17 1,10 * *       | Every 15th minute from 9:00 through 17:59 on the 1st and the 10th day of month
+    * * * * 1,2,3            | Every minute on Monday, Tuesday, and Wednesday
+    0 0 1 1/2 * *            | At 00:00 on the 1st day of every 2nd month
+    0 0 1 1/2,12 * *         | At 00:00 on the 1st day of every 2nd month and December
     """
 
 
