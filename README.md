@@ -119,3 +119,27 @@ For example, "MON#1" means "first Monday of the month", "MON#2" means "second Mo
 of the month".
 
 Example: `0 0 * * MON#1` (at midnight of the first monday of every month).
+
+## The `explain()` Method
+
+Starting from version 2.4, the CronSim objects have an `explain()` method
+which generates a text description of the supplied cron expression.
+
+```python
+from datetime import datetime
+from cronsim import CronSim
+
+expr = CronSim("*/5 9-17 * * *", datetime.now())
+print(expr.explain())
+```
+
+Outputs:
+
+```
+Every 5th minute from 9:00 through 17:59
+```
+
+The text descriptions are available in English only. The text descriptions
+use the 24-hour time format ("23:00" instead of "11:00 PM").
+
+For examples of generated descriptions see `tests/test_explain.py`.
