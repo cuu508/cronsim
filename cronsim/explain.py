@@ -330,8 +330,8 @@ class Day(Field):
         it produces "the 1st, 3rd, and 5th day of month".
         """
         if self.all_singles and len(self.parsed) > 1:
-            labels = [ordinal(v) for v in self.singles()]
-            return f"the {join(labels)} day of month"
+            labels = [f"the {ordinal(v)}" for v in self.singles()]
+            return f"{join(labels)} day of month"
         return super().format()
 
     def __str__(self) -> str:
@@ -443,7 +443,7 @@ class Expression(object):
         self.dow = Weekday(parts[4])
         self.day_and = parts[2].startswith("*") or parts[4].startswith("*")
 
-    def times(self) -> str | None:
+    def optimized_times(self) -> str | None:
         """Apply formatting optimizations for hours and minutes.
 
         If both hours and minutes contain only a few single values, format them
@@ -451,6 +451,9 @@ class Expression(object):
 
         If hours have a single value, and minutes have a single sequence with step 1,
         format them as "every minute from HH:MM through HH:MM".
+
+        If minutes have a single "*/<step>" sequence and hours have a sequence
+        with step 1, format them as "every nth minute from HH:00 through HH:59"
 
         If no special optimizations apply, return None.
         """
@@ -464,7 +467,7 @@ class Expression(object):
                     for m in sorted(minute_terms):
                         times.append(format_time(h, m))
 
-                return "at " + join(times)
+                return "at " + join(times), True
 
         # every minute from 11:00 through 11:10
         if self.hour.single_value and len(self.minute.parsed) == 1:
@@ -472,11 +475,19 @@ class Expression(object):
             if seq.start is not None and seq.stop is not None and seq.step == 1:
                 start = format_time(self.hour.single_value, seq.start)
                 stop = format_time(self.hour.single_value, seq.stop)
-                return f"Every minute from {start} through {stop}"
+                return f"every minute from {start} through {stop}", False
+
+        if len(self.hour.parsed) == 1 and len(self.minute.parsed) == 1:
+            hours = self.hour.parsed[0]
+            minutes = self.minute.parsed[0]
+            if hours.step == 1 and minutes.start is None:
+                start = format_time(hours.start, 0)
+                stop = format_time(hours.stop, 59)
+                return f"{self.minute} from {start} through {stop}", False
 
         return None
 
-    def single_date(self) -> str | None:
+    def optimized_dates(self) -> str | None:
         """Apply formatting optimizations for specific dates.
 
         If day-of-month is L, format it as
@@ -513,15 +524,15 @@ class Expression(object):
                 return "at the start of every hour", False
             return f"{self.minute} of every hour", False
 
-        if times := self.times():
-            return times, True
+        if times := self.optimized_times():
+            return times
 
         return f"{self.minute} {self.hour}", False
 
     def translate_date(self, allow_every_day: bool) -> str:
         """Convert the day, month, and weekday fields to text."""
-        if single_date := self.single_date():
-            return single_date
+        if dates := self.optimized_dates():
+            return dates
 
         if allow_every_day:
             if self.day.star and self.dow.star and self.month.all_singles:
