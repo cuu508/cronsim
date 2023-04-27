@@ -40,21 +40,28 @@ def join(l: list[str]) -> str:
     return f"{head}, and {l[-1]}"
 
 
+ORDINALS = {
+    1: "first",
+    2: "second",
+    3: "third",
+    4: "fourth",
+    5: "fifth",
+    6: "sixth",
+    7: "seventh",
+    8: "eighth",
+    9: "ninth",
+}
+
+
 def ordinal(x: int) -> str:
     """Format integer as an ordinal number.
 
     >>> ordinal(1)
-    '1st'
+    'first'
     >>> ordinal(15)
     '15th'
     """
-    if x == 1:
-        return "1st"
-    if x == 2:
-        return "2nd"
-    if x == 3:
-        return "3rd"
-    return f"{x}th"
+    return ORDINALS.get(x, f"{x}th")
 
 
 def format_time(h: int, m: int) -> str:
