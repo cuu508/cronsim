@@ -65,17 +65,14 @@ def ordinal(x: int) -> str:
 
 
 def format_time(h: int, m: int) -> str:
-    """Format hours and minutes as a 24-hour time.
+    """Format hours and minutes as HH:MM.
 
     >>> format_time(0, 0)
     '00:00'
     >>> format_time(1, 23)
-    '1:23'
+    '01:23'
     """
-    if h == 0:
-        return f"00:{m:02d}"
-
-    return f"{h}:{m:02d}"
+    return f"{h:02d}:{m:02d}"
 
 
 class Field(object):

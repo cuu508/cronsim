@@ -69,7 +69,7 @@ class TestHourField(TestBase):
     * 1/4 * * *           | Every minute past every fourth hour from 1 through 23
     * 1-10/4 * * *        | Every minute past every fourth hour from 1 through 10
     * 1,*/4 * * *         | Every minute past hour 1 and every fourth hour
-    * 1-4 * * *           | Every minute from 1:00 through 4:59
+    * 1-4 * * *           | Every minute from 01:00 through 04:59
     * 0-4,23 * * *        | Every minute past every hour from 0 through 4 and hour 23
     * 0-7,18-23 * * *     | Every minute past every hour from 0 through 7 and every hour from 18 through 23
     * 1,9-12,*/4 * * *    | Every minute past hour 1, every hour from 9 through 12, and every fourth hour
@@ -184,13 +184,13 @@ class TestDateCombinations(TestBase):
 class TestSpecificTimes(TestBase):
     """
     0 0 * * *             | At 00:00 every day
-    0 2 * * *             | At 2:00 every day
+    0 2 * * *             | At 02:00 every day
     0,30 13,14 * * *      | At 13:00, 13:30, 14:00, and 14:30 every day
-    0,15,30,45 2 * * *    | At 2:00, 2:15, 2:30, and 2:45 every day
+    0,15,30,45 2 * * *    | At 02:00, 02:15, 02:30, and 02:45 every day
     0,15,30,45 2,3 * * *  | At minutes 0, 15, 30, and 45 past hours 2 and 3
     0-10 11 * * *         | Every minute from 11:00 through 11:10
-    * 9-17 * * *          | Every minute from 9:00 through 17:59
-    */2 9-17 * * *        | Every second minute from 9:00 through 17:59
+    * 9-17 * * *          | Every minute from 09:00 through 17:59
+    */2 9-17 * * *        | Every second minute from 09:00 through 17:59
     """
 
 
@@ -212,7 +212,7 @@ class TestFunkySchedules(TestBase):
 class TestSmoke(TestBase):
     """
     30-59/5 2,4,6 1-10 1-3 * | Every fifth minute from 30 through 59 past hours 2, 4, and 6 on every day of month from 1 through 10 in every month from January through March
-    0/15 9-17 1,10 * *       | Every 15th minute from 9:00 through 17:59 on the first and the 10th day of month
+    0/15 9-17 1,10 * *       | Every 15th minute from 09:00 through 17:59 on the first and the 10th day of month
     * * * * 1,2,3            | Every minute on Monday, Tuesday, and Wednesday
     0 0 1 1/2 * *            | At 00:00 on the first day of every second month
     0 0 1 1/2,12 * *         | At 00:00 on the first day of every second month and December
