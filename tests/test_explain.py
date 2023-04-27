@@ -196,7 +196,8 @@ class TestSpecificTimes(TestBase):
 
 class TestSpecificDates(TestBase):
     """
-    0 0 1 1 *            | At 00:00 on January 1st
+    0 0 1 1 *            | At 00:00 on January 1
+    0 0 15 1 *           | At 00:00 on January 15
     0 0 L 1 *            | At 00:00 on the last day of January
     """
 

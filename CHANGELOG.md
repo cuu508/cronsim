@@ -1,6 +1,9 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## 2.5-dev - Unreleased
+- Fix month-day formatting ("January 1st" -> "January 1")
+
 ## 2.4 - 2023-04-26
 - Add explain() method which describes the expression in human language
 - Remove python 3.7 support

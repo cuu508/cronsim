@@ -506,8 +506,7 @@ class Expression(object):
             if self.day.single_value == -1:
                 return f"on the last day of {self.month.format()}"
             if self.month.single_value and self.day.single_value:
-                date_ord = ordinal(self.day.single_value)
-                return f"on {self.month.format()} {date_ord}"
+                return f"on {self.month.format()} {self.day.single_value}"
             if self.day.single_value:
                 date_ord = ordinal(self.day.single_value)
                 return f"on the {date_ord} day of {self.month.format()}"
