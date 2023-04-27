@@ -572,7 +572,7 @@ def explain(expr: str) -> str:
     """Convert the given cron expression to human-friendly description.
 
     >>> explain("0 0 15 JAN-FEB *")
-    'At 00:00 on the 15th day of month in January and February'
+    'At 00:00 on the 15th day of January and February'
     """
     parts = expr.upper().split()
     return Expression(parts).explain()

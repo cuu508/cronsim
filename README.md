@@ -136,7 +136,7 @@ print(expr.explain())
 Outputs:
 
 ```
-Every 5th minute from 9:00 through 17:59
+Every fifth minute from 09:00 through 17:59
 ```
 
 The text descriptions are available in English only. The text descriptions
