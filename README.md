@@ -91,19 +91,20 @@ for examples of this special handling.
 
 ## Cron Expression Feature Matrix
 
-| Feature                              | Debian | croniter | cronsim |
-| ------------------------------------ | :----: | :------: | :-----: |
-| Seconds in the 6th field             | No     | Yes      | No      |
-| "L" as the day-of-month              | No     | Yes      | Yes     |
-| "LW" as the day-of-month             | No     | No       | Yes     |
-| "L" in the day-of-week field         | No     | No       | Yes     |
-| Nth weekday of month                 | No     | Yes      | Yes     |
+| Feature                              | Debian | Quartz | croniter | cronsim |
+| ------------------------------------ | :----: | :----: | :------: | :-----: |
+| Seconds in the 6th field             | No     | Yes    | Yes      | No      |
+| "L" as the day-of-month              | No     | Yes    | Yes      | Yes     |
+| "LW" as the day-of-month             | No     | Yes    | No       | Yes     |
+| "L" in the day-of-week field         | No     | Yes    | No       | Yes     |
+| Nth weekday of month                 | No     | Yes    | Yes      | Yes     |
 
 
 **Seconds in the 6th field**: an optional sixth field specifying seconds.
-Supports the same syntax features as the minutes field.
+Supports the same syntax features as the minutes field. Quartz Scheduler
+expects seconds in the first field, croniter expects seconds in the last field.
 
-Example: `* * * * * */15` (every 15 seconds).
+Quartz example: `*/15 * * * * *` (every 15 seconds).
 
 **"L" as the day-of-month**: support for the "L" special character in the
 day-of-month field. Interpreted as "the last day of the month".
