@@ -41,6 +41,7 @@ def join(l: list[str]) -> str:
 
 
 ORDINALS = {
+    -1: "last",
     1: "first",
     2: "second",
     3: "third",
@@ -121,6 +122,8 @@ class Field(object):
                 step = int(step_str)
                 if term == "*":
                     yield Sequence(step=step)
+                elif term == "LW":
+                    yield Sequence(start=-2, stop=-2, nth=-1)
                 elif term == "L":
                     yield Sequence(start=-1, stop=-1, nth=-1)
                 else:
@@ -146,6 +149,8 @@ class Field(object):
                     yield Sequence()
                 else:
                     yield Sequence(start=start, stop=stop)
+            elif term == "LW":
+                yield Sequence(start=-2, stop=-2, nth=-1)
             elif term == "L":
                 yield Sequence(start=-1, stop=-1, nth=-1)
             else:
@@ -313,13 +318,17 @@ class Day(Field):
         return f"the {ordinal(value)} day of month"
 
     def format_nth(self, value: int, nth: int) -> str:
-        """Format the last day of month (L) value.
+        """Format the L and LW values.
 
         >>> format_nth(-1)
         'the last day of the month'
+        >>> format_nth(-2)
+        'the last weekday of the month'
         """
-        if nth == -1:
+        if nth == -1 and value == -1:
             return "the last day of the month"
+        if nth == -1 and value == -2:
+            return "the last weekday of the month"
         return super().format_nth(value, nth)
 
     def format(self) -> str:
@@ -329,10 +338,15 @@ class Day(Field):
         all values are single values. For example, instead of
         "the 1st day of month, the 3rd day of month, and the 5th day of month"
         it produces "the 1st, 3rd, and 5th day of month".
+
+        We cannot apply this optimization if the single values contain "-2"
+        (the special value for "last weekday of the month").
         """
         if self.all_singles and len(self.parsed) > 1:
-            labels = [f"the {ordinal(v)}" for v in self.singles()]
-            return f"{join(labels)} day of month"
+            singles = self.singles()
+            if -2 not in singles:
+                labels = [f"the {ordinal(v)}" for v in singles]
+                return f"{join(labels)} day of month"
         return super().format()
 
     def __str__(self) -> str:
@@ -496,6 +510,9 @@ class Expression(object):
         If day-of-month is L, format it as
         "on the last day of <month description here>".
 
+        If day-of-month is LW, format it as
+        "on the last weekday of <month description here>".
+
         If month and day-of-month each have a single value
         (for example, month 2 and day-of-month 1), format them as
         "February 1st".
@@ -509,6 +526,8 @@ class Expression(object):
         if self.dow.star:
             if self.day.single_value == -1:
                 return f"on the last day of {self.month.format()}"
+            if self.day.single_value == -2:
+                return f"on the last weekday of {self.month.format()}"
             if self.month.single_value and self.day.single_value:
                 return f"on {self.month.format()} {self.day.single_value}"
             if self.day.single_value:

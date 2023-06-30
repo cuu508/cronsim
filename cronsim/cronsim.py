@@ -94,7 +94,7 @@ class Field(IntEnum):
                 raise CronSimError(self.msg())
 
             items = self.parse(term)
-            if items == {CronSim.LAST}:
+            if items == {CronSim.LAST} or items == {CronSim.LAST_WEEKDAY}:
                 return items
 
             if len(items) == 1:
@@ -118,6 +118,9 @@ class Field(IntEnum):
 
             return set(range(start, end + 1))
 
+        if self == Field.DAY and s == "LW":
+            return {CronSim.LAST_WEEKDAY}
+
         if self == Field.DAY and s == "L":
             return {CronSim.LAST}
 
@@ -128,8 +131,22 @@ def is_imaginary(dt: datetime) -> bool:
     return dt != dt.astimezone(UTC).astimezone(dt.tzinfo)
 
 
+def last_weekday(year: int, month: int) -> int:
+    """Return the date of the last weekday of a given year and month."""
+    first_dow, last_date = calendar.monthrange(year, month)
+    last_dow = (first_dow + last_date - 1) % 7
+
+    if last_dow == 6:
+        return last_date - 2
+    elif last_dow == 5:
+        return last_date - 1
+
+    return last_date
+
+
 class CronSim(object):
     LAST = -1000
+    LAST_WEEKDAY = -1001
 
     def __init__(self, expr: str, dt: datetime):
         self.dt = dt.replace(second=0, microsecond=0)
@@ -225,6 +242,10 @@ class CronSim(object):
         """Return True is day-of-month matches."""
         if d.day in self.days:
             return True
+
+        if self.LAST_WEEKDAY in self.days:
+            if d.day == last_weekday(d.year, d.month):
+                return True
 
         if self.LAST in self.days:
             _, last = calendar.monthrange(d.year, d.month)

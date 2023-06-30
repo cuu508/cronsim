@@ -95,6 +95,7 @@ for examples of this special handling.
 | ------------------------------------ | :----: | :------: | :-----: |
 | Seconds in the 6th field             | No     | Yes      | No      |
 | "L" as the day-of-month              | No     | Yes      | Yes     |
+| "LW" as the day-of-month             | No     | No       | Yes     |
 | "L" in the day-of-week field         | No     | No       | Yes     |
 | Nth weekday of month                 | No     | Yes      | Yes     |
 
@@ -108,6 +109,11 @@ Example: `* * * * * */15` (every 15 seconds).
 day-of-month field. Interpreted as "the last day of the month".
 
 Example: `0 0 L * *` (at the midnight of the last day of every month).
+
+**"LW" as the day-of-month**: support for the "LW" special value in the
+day-of-month field. Interpreted as "the last weekday (Mon-Fri) of the month".
+
+Example: `0 0 LW * *` (at the midnight of the last weekday of every month).
 
 **"L" in the day-of-week field**: support for the "{weekday}L" syntax.
 For example, "5L" means "the last Friday of the month".

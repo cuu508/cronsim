@@ -96,9 +96,15 @@ class TestDayField(TestBase):
     0 0 2/5 * *           | At 00:00 on every fifth day of month from 2 through 31
     0 0 2-10/5 * *        | At 00:00 on every fifth day of month from 2 through 10
     0 0 1-5,*/5 * *       | At 00:00 on every day of month from 1 through 5 and every fifth day of month
+    0 0 1,L * *           | At 00:00 on the first and the last day of month
+    0 0 1,2,L * *         | At 00:00 on the first, the second, and the last day of month
     0 0 L * *             | At 00:00 on the last day of every month
     0 0 L/2 * *           | At 00:00 on the last day of every month
     0 0 L * MON           | At 00:00 on the last day of the month and on Monday
+    0 0 LW * *            | At 00:00 on the last weekday of every month
+    0 0 LW/2 * *          | At 00:00 on the last weekday of every month
+    0 0 LW * MON          | At 00:00 on the last weekday of the month and on Monday
+    0 0 L,LW * *          | At 00:00 on the last day of the month and the last weekday of the month
     """
 
 
@@ -178,6 +184,7 @@ class TestDateCombinations(TestBase):
     0 0 1,2 JAN-FEB *     | At 00:00 on the first and the second day of month in January and February
     0 0 * * 1-5           | At 00:00 on Monday through Friday
     0 0 L JAN *           | At 00:00 on the last day of January
+    0 0 LW JAN *          | At 00:00 on the last weekday of January
     """
 
 
@@ -199,6 +206,7 @@ class TestSpecificDates(TestBase):
     0 0 1 1 *            | At 00:00 on January 1
     0 0 15 1 *           | At 00:00 on January 15
     0 0 L 1 *            | At 00:00 on the last day of January
+    0 0 LW 1 *           | At 00:00 on the last weekday of January
     """
 
 

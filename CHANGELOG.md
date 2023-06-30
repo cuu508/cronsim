@@ -1,6 +1,9 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## 2.5-dev - Unreleased
+- Add support for "LW" in the day-of-month field (#1)
+
 ## 2.4.1 - 2023-04-27
 - [explain] Fix month-day formatting ("January 1st" -> "January 1")
 - [explain] Change ordinal formatting to use words instead of numerals for 1-9

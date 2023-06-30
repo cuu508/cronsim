@@ -65,9 +65,17 @@ class TestParse(unittest.TestCase):
         w = CronSim("* * L * *", NOW)
         self.assertEqual(w.days, {CronSim.LAST})
 
+    def test_it_parses_day_lw(self) -> None:
+        w = CronSim("* * LW * *", NOW)
+        self.assertEqual(w.days, {CronSim.LAST_WEEKDAY})
+
     def test_it_parses_day_lowercase_l(self) -> None:
         w = CronSim("* * l * *", NOW)
         self.assertEqual(w.days, {CronSim.LAST})
+
+    def test_it_parses_day_lowercase_lw(self) -> None:
+        w = CronSim("* * lw * *", NOW)
+        self.assertEqual(w.days, {CronSim.LAST_WEEKDAY})
 
     def test_it_parses_unrestricted_day_restricted_dow(self) -> None:
         w = CronSim("* * * * 1", NOW)
@@ -113,6 +121,10 @@ class TestParse(unittest.TestCase):
         w = CronSim("* * L/2 * *", NOW)
         self.assertEqual(w.days, {CronSim.LAST})
 
+    def test_it_accepts_lw_with_step(self) -> None:
+        w = CronSim("* * LW/2 * *", NOW)
+        self.assertEqual(w.days, {CronSim.LAST_WEEKDAY})
+
     def test_it_handles_a_mix_of_ints_and_tuples(self) -> None:
         w = CronSim("* * * * 1,2,3#1", NOW)
         self.assertEqual(w.weekdays, {1, 2, (3, 1)})
@@ -141,13 +153,29 @@ class TestValidation(unittest.TestCase):
             "* * * * * %s",
             "1-%s * * * *",
             "%s-60 * * * *",
+            "* * 1-%s * *",
+            "* * 1,%s * *",
+            "* * %s/1 * *",
             "* * * %s-DEC *",
             "* * * JAN-%s *",
             "* * * * %s-SUN",
             "* * * * MON-%s",
         )
 
-        bad_values = ("-1", "61", "ABC", "2/", "/2", "2#", "#2", "1##1", "1//2", "¹")
+        bad_values = (
+            "-1",
+            "61",
+            "ABC",
+            "2/",
+            "/2",
+            "2#",
+            "#2",
+            "1##1",
+            "1//2",
+            "¹",
+            "LL",
+            "LWX",
+        )
 
         for pattern, s in product(patterns, bad_values):
             with self.assertRaises(CronSimError):
@@ -201,6 +229,10 @@ class TestIterator(unittest.TestCase):
     def test_it_handles_l(self) -> None:
         dt = next(CronSim("1 1 L * *", NOW))
         self.assertEqual(dt.isoformat(), "2020-01-31T01:01:00")
+
+    def test_it_handles_lw(self) -> None:
+        dt = next(CronSim("1 1 LW 5 *", NOW))
+        self.assertEqual(dt.isoformat(), "2020-05-29T01:01:00")
 
     def test_it_handles_last_friday(self) -> None:
         it = CronSim("1 1 * * 5L", NOW)
