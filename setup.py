@@ -6,11 +6,11 @@ from setuptools import find_packages, setup
 
 setup(
     name="cronsim",
-    version="2.4.1",
+    version="2.5",
     url="https://github.com/cuu508/cronsim",
     license="BSD",
     author="Pēteris Caune",
-    author_email="cuu508@gmail.com",
+    author_email="cuu508@monkeyseemonkeydo.lv",
     description="Cron expression parser and evaluator",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",

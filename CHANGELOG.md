@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## 2.5-dev - Unreleased
+## 2.5 - 2023-07-01
 - Add support for "LW" in the day-of-month field (#1)
 
 ## 2.4.1 - 2023-04-27

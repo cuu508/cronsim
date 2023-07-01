@@ -32,7 +32,7 @@ for x in range(0, 10):
     print(next(it))
 ```
 
-Outputs:
+Produces:
 
 ```
 2044-02-29 00:00:00
@@ -45,6 +45,40 @@ Outputs:
 2236-02-29 00:00:00
 2264-02-29 00:00:00
 2292-02-29 00:00:00
+```
+
+If CronSim receives an invalid cron expression, it raises `cronsim.CronSimError`:
+
+```python
+from datetime import datetime
+from cronsim import CronSim
+
+CronSim("123 * * * *", datetime.now())
+```
+
+Produces:
+
+```
+cronsim.cronsim.CronSimError: Bad minute
+```
+
+If CronSim cannot find a matching datetime in the next 50 years from the start
+date or from the previous match, it stops iteration by raising `StopIteration`:
+
+```python
+from datetime import datetime
+from cronsim import CronSim
+
+# Every minute of 1st and 21st of month,
+# if it is also the *last Monday* of the month:
+it = CronSim("* * */20 * 1L", datetime.now())
+print(next(it))
+```
+
+Produces:
+
+```
+StopIteration
 ```
 
 ## CronSim Works With zoneinfo
