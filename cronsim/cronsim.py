@@ -150,7 +150,6 @@ class CronSim(object):
 
     def __init__(self, expr: str, dt: datetime, forward: bool = True):
         self.dt = dt.replace(second=0, microsecond=0)
-        self.forward = forward
         self.tick_direction = 1 if forward else -1
 
         self.parts = expr.upper().split()
@@ -349,7 +348,7 @@ class CronSim(object):
 
         month = needle.month
         while not self.match_day(needle):
-            needle += td(days=-1)
+            needle -= td(days=1)
             if needle.month != month:
                 # We're in a different month now, break out to re-check month
                 # This significantly speeds up the "0 0 * 2 MON#5" case
@@ -440,7 +439,7 @@ class CronSim(object):
     def __next__(self) -> datetime:
         self.tick()
 
-        if self.forward:
+        if self.tick_direction == 1:
             self.advance()
         else:
             self.reverse()
