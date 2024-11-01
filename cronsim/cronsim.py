@@ -387,64 +387,75 @@ class CronSim(object):
     def __iter__(self) -> "CronSim":
         return self
 
-    def __next__(self) -> datetime:
-        self.tick()
+    def advance(self) -> None:
+        """Advance self.dt forward until all constraints are satisfied."""
+        start_year = self.dt.year
+        while True:
+            self.advance_month()
+            if self.dt.year > start_year + 50:
+                # Give up if there is no match for 50 years.
+                # It would be nice to detect "this will never yield any results"
+                # situations in a more intelligent way.
+                raise StopIteration
 
+            if self.advance_day():
+                continue
+
+            if self.advance_hour():
+                continue
+
+            if self.advance_minute():
+                continue
+
+            break
+
+    def reverse(self) -> None:
+        """Advance self.dt backward until all constraints are satisfied."""
         # If we are iterating backwards, and a single tick landed us into an
         # imaginary or ambiguous  datetime, step backwards more until we are out of the
         # problematic period.
-        if not self.forward:
-            if self.fixup_tz:
-                result = self.dt.replace(tzinfo=self.fixup_tz, fold=0)
-                while is_imaginary(result):
-                    self.dt -= td(minutes=1)
-                    result = self.dt.replace(tzinfo=self.fixup_tz)
+        if self.fixup_tz:
+            result = self.dt.replace(tzinfo=self.fixup_tz, fold=0)
+            while is_imaginary(result):
+                self.dt -= td(minutes=1)
+                result = self.dt.replace(tzinfo=self.fixup_tz)
 
         start_year = self.dt.year
         while True:
-            if self.forward:
-                self.advance_month()
-                if self.dt.year > start_year + 50:
-                    # Give up if there is no match for 50 years.
-                    # It would be nice to detect "this will never yield any results"
-                    # situations in a more intelligent way.
-                    raise StopIteration
+            self.reverse_month()
+            if self.dt.year < start_year - 50:
+                raise StopIteration
 
-                if self.advance_day():
-                    continue
+            if self.reverse_day():
+                continue
 
-                if self.advance_hour():
-                    continue
+            if self.reverse_hour():
+                continue
 
-                if self.advance_minute():
-                    continue
+            if self.reverse_minute():
+                continue
 
-            else:
-                self.reverse_month()
-                if self.dt.year < start_year - 50:
-                    raise StopIteration
+            break
 
-                if self.reverse_day():
-                    continue
+    def __next__(self) -> datetime:
+        self.tick()
 
-                if self.reverse_hour():
-                    continue
+        if self.forward:
+            self.advance()
+        else:
+            self.reverse()
 
-                if self.reverse_minute():
-                    continue
+        # The last step is to check if we need to fix up an imaginary
+        # or ambiguous date.
+        if self.fixup_tz:
+            result = self.dt.replace(tzinfo=self.fixup_tz, fold=0)
+            while is_imaginary(result):
+                self.dt += td(minutes=1)
+                result = self.dt.replace(tzinfo=self.fixup_tz)
 
-            # If all constraints are satisfied then we have the result.
-            # The last step is to check if we need to fix up an imaginary
-            # or ambiguous date.
-            if self.fixup_tz:
-                result = self.dt.replace(tzinfo=self.fixup_tz, fold=0)
-                while is_imaginary(result):
-                    self.dt += td(minutes=1)
-                    result = self.dt.replace(tzinfo=self.fixup_tz)
+            return result
 
-                return result
-
-            return self.dt
+        return self.dt
 
     def explain(self) -> str:
         from cronsim.explain import Expression
