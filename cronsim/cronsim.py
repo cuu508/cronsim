@@ -148,9 +148,9 @@ class CronSim(object):
     LAST = -1000
     LAST_WEEKDAY = -1001
 
-    def __init__(self, expr: str, dt: datetime, forward: bool = True):
+    def __init__(self, expr: str, dt: datetime, reverse: bool = False):
         self.dt = dt.replace(second=0, microsecond=0)
-        self.tick_direction = 1 if forward else -1
+        self.tick_direction = -1 if reverse else 1
 
         self.parts = expr.upper().split()
         if len(self.parts) != 5:
