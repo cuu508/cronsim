@@ -148,8 +148,9 @@ class CronSim(object):
     LAST = -1000
     LAST_WEEKDAY = -1001
 
-    def __init__(self, expr: str, dt: datetime):
+    def __init__(self, expr: str, dt: datetime, forward: bool = True):
         self.dt = dt.replace(second=0, microsecond=0)
+        self.forward = forward
 
         self.parts = expr.upper().split()
         if len(self.parts) != 5:
@@ -218,6 +219,20 @@ class CronSim(object):
 
         return True
 
+    def reverse_minute(self) -> bool:
+        """Roll backward the minute component until it satisfies the constraints."""
+
+        if self.dt.minute in self.minutes:
+            return False
+
+        while self.dt.minute not in self.minutes:
+            self.tick(minutes=-1)
+            if self.dt.minute == 59:
+                # Break out to re-check month, day and hour
+                break
+
+        return True
+
     def advance_hour(self) -> bool:
         """Roll forward the hour component until it satisfies the constraints.
 
@@ -233,6 +248,21 @@ class CronSim(object):
         while self.dt.hour not in self.hours:
             self.tick(minutes=60)
             if self.dt.hour == 0:
+                # break out to re-check month and day
+                break
+
+        return True
+
+    def reverse_hour(self) -> bool:
+        """Roll backward the hour component until it satisfies the constraints."""
+
+        if self.dt.hour in self.hours:
+            return False
+
+        self.dt = self.dt.replace(minute=59)
+        while self.dt.hour not in self.hours:
+            self.tick(minutes=-60)
+            if self.dt.hour == 23:
                 # break out to re-check month and day
                 break
 
@@ -309,6 +339,24 @@ class CronSim(object):
         self.dt = datetime.combine(needle, time(), tzinfo=self.dt.tzinfo)
         return True
 
+    def reverse_day(self) -> bool:
+        """Roll backward the day component until it satisfies the constraints."""
+
+        needle = self.dt.date()
+        if self.match_day(needle):
+            return False
+
+        month = needle.month
+        while not self.match_day(needle):
+            needle += td(days=-1)
+            if needle.month != month:
+                # We're in a different month now, break out to re-check month
+                # This significantly speeds up the "0 0 * 2 MON#5" case
+                break
+
+        self.dt = datetime.combine(needle, time(23, 59), tzinfo=self.dt.tzinfo)
+        return True
+
     def advance_month(self) -> None:
         """Roll forward the month component until it satisfies the constraints."""
 
@@ -321,29 +369,68 @@ class CronSim(object):
 
         self.dt = datetime.combine(needle, time(), tzinfo=self.dt.tzinfo)
 
+    def reverse_month(self) -> None:
+        """Roll backward the month component until it satisfies the constraints."""
+        if self.dt.month in self.months:
+            return
+
+        needle = self.dt.date()
+        while needle.month not in self.months:
+            # We need the last day of the previous month.
+            # Go to the start of this month, and then reverse by one extra day:
+            needle = needle.replace(day=1)
+            needle -= td(days=1)
+
+        self.dt = datetime.combine(needle, time(23, 59), tzinfo=self.dt.tzinfo)
+
     def __iter__(self) -> "CronSim":
         return self
 
     def __next__(self) -> datetime:
-        self.tick()
+        self.tick(minutes=1 if self.forward else -1)
+
+        # If we are iterating backwards, and a single tick landed us into an
+        # imaginary or ambiguous  datetime, step backwards more until we are out of the
+        # problematic period.
+        if not self.forward:
+            if self.fixup_tz:
+                result = self.dt.replace(tzinfo=self.fixup_tz, fold=0)
+                while is_imaginary(result):
+                    self.dt -= td(minutes=1)
+                    result = self.dt.replace(tzinfo=self.fixup_tz)
 
         start_year = self.dt.year
         while True:
-            self.advance_month()
-            if self.dt.year > start_year + 50:
-                # Give up if there is no match for 50 years.
-                # It would be nice to detect "this will never yield any results"
-                # situations in a more intelligent way.
-                raise StopIteration
+            if self.forward:
+                self.advance_month()
+                if self.dt.year > start_year + 50:
+                    # Give up if there is no match for 50 years.
+                    # It would be nice to detect "this will never yield any results"
+                    # situations in a more intelligent way.
+                    raise StopIteration
 
-            if self.advance_day():
-                continue
+                if self.advance_day():
+                    continue
 
-            if self.advance_hour():
-                continue
+                if self.advance_hour():
+                    continue
 
-            if self.advance_minute():
-                continue
+                if self.advance_minute():
+                    continue
+
+            else:
+                self.reverse_month()
+                if self.dt.year < start_year - 50:
+                    raise StopIteration
+
+                if self.reverse_day():
+                    continue
+
+                if self.reverse_hour():
+                    continue
+
+                if self.reverse_minute():
+                    continue
 
             # If all constraints are satisfied then we have the result.
             # The last step is to check if we need to fix up an imaginary
