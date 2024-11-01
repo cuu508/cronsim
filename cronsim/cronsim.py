@@ -151,6 +151,7 @@ class CronSim(object):
     def __init__(self, expr: str, dt: datetime, forward: bool = True):
         self.dt = dt.replace(second=0, microsecond=0)
         self.forward = forward
+        self.tick_direction = 1 if forward else -1
 
         self.parts = expr.upper().split()
         if len(self.parts) != 5:
@@ -184,14 +185,14 @@ class CronSim(object):
                 self.dt = self.dt.replace(tzinfo=None)
 
     def tick(self, minutes: int = 1) -> None:
-        """Roll self.dt forward by 1 or more minutes and fix timezone."""
+        """Roll self.dt in `tick_direction` by 1 or more minutes and fix timezone."""
 
         if self.dt.tzinfo not in (None, UTC):
             as_utc = self.dt.astimezone(UTC)
-            as_utc += td(minutes=minutes)
+            as_utc += td(minutes=minutes * self.tick_direction)
             self.dt = as_utc.astimezone(self.dt.tzinfo)
         else:
-            self.dt += td(minutes=minutes)
+            self.dt += td(minutes=minutes * self.tick_direction)
 
     def advance_minute(self) -> bool:
         """Roll forward the minute component until it satisfies the constraints.
@@ -226,7 +227,7 @@ class CronSim(object):
             return False
 
         while self.dt.minute not in self.minutes:
-            self.tick(minutes=-1)
+            self.tick()
             if self.dt.minute == 59:
                 # Break out to re-check month, day and hour
                 break
@@ -261,7 +262,7 @@ class CronSim(object):
 
         self.dt = self.dt.replace(minute=59)
         while self.dt.hour not in self.hours:
-            self.tick(minutes=-60)
+            self.tick(minutes=60)
             if self.dt.hour == 23:
                 # break out to re-check month and day
                 break
@@ -387,7 +388,7 @@ class CronSim(object):
         return self
 
     def __next__(self) -> datetime:
-        self.tick(minutes=1 if self.forward else -1)
+        self.tick()
 
         # If we are iterating backwards, and a single tick landed us into an
         # imaginary or ambiguous  datetime, step backwards more until we are out of the
