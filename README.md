@@ -13,7 +13,7 @@ Development priorities:
   including its quirky behaviour during DST transitions.
 * Readability. Prefer simple over clever.
 * Minimalism. Don't implement features that Healthchecks will not use
-  (for example, iteration in reverse, or the seconds field in cron expressions).
+  (for example, the seconds field in cron expressions).
 
 ## Installation
 
@@ -27,8 +27,8 @@ pip install cronsim
 from datetime import datetime
 from cronsim import CronSim
 
-it = CronSim("0 0 * 2 MON#5", datetime.now())
-for x in range(0, 10):
+it = CronSim("0 0 * 2 MON#5", datetime(2020, 1, 1))
+for x in range(0, 5):
     print(next(it))
 ```
 
@@ -40,11 +40,22 @@ Produces:
 2112-02-29 00:00:00
 2140-02-29 00:00:00
 2168-02-29 00:00:00
-2196-02-29 00:00:00
-2208-02-29 00:00:00
-2236-02-29 00:00:00
-2264-02-29 00:00:00
-2292-02-29 00:00:00
+```
+
+To iterate backwards in time, add `reverse=True` in the constructor:
+
+```python
+from datetime import datetime
+from cronsim import CronSim
+
+it = CronSim("0 0 * 2 MON#5", datetime(2020, 1, 1), reverse=True)
+print(next(it))
+```
+
+Produces:
+
+```
+2016-02-29 00:00:00
 ```
 
 If CronSim receives an invalid cron expression, it raises `cronsim.CronSimError`:
@@ -53,7 +64,7 @@ If CronSim receives an invalid cron expression, it raises `cronsim.CronSimError`
 from datetime import datetime
 from cronsim import CronSim
 
-CronSim("123 * * * *", datetime.now())
+CronSim("123 * * * *", datetime(2020, 1, 1))
 ```
 
 Produces:
@@ -71,7 +82,7 @@ from cronsim import CronSim
 
 # Every minute of 1st and 21st of month,
 # if it is also the *last Monday* of the month:
-it = CronSim("* * */20 * 1L", datetime.now())
+it = CronSim("* * */20 * 1L", datetime(2020, 1, 1))
 print(next(it))
 ```
 
