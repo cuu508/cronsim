@@ -186,6 +186,10 @@ class CronSim(object):
     def tick(self, minutes: int = 1) -> None:
         """Roll self.dt in `tick_direction` by 1 or more minutes and fix timezone."""
 
+        # Tick should only receive positive values.
+        # Receiving a negative value or zero means a coding error.
+        assert minutes > 0
+
         if self.dt.tzinfo not in (None, UTC):
             as_utc = self.dt.astimezone(UTC)
             as_utc += td(minutes=minutes * self.tick_direction)
@@ -208,7 +212,8 @@ class CronSim(object):
             # An optimization for the special case where self.minutes has exactly
             # one element. Instead of advancing one minute per iteration,
             # make a jump from the current minute to the target minute.
-            delta = (next(iter(self.minutes)) - self.dt.minute) % 60
+            (target_minute,) = self.minutes
+            delta = (target_minute - self.dt.minute) % 60
             self.tick(minutes=delta)
 
         while self.dt.minute not in self.minutes:
@@ -224,6 +229,14 @@ class CronSim(object):
 
         if self.dt.minute in self.minutes:
             return False
+
+        if len(self.minutes) == 1:
+            # An optimization for the special case where self.minutes has exactly
+            # one element. Instead of advancing one minute per iteration,
+            # make a jump from the current minute to the target minute.
+            (target_minute,) = self.minutes
+            delta = (self.dt.minute - target_minute) % 60
+            self.tick(minutes=delta)
 
         while self.dt.minute not in self.minutes:
             self.tick()
