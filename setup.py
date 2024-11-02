@@ -6,7 +6,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="cronsim",
-    version="2.5",
+    version="2.6",
     url="https://github.com/cuu508/cronsim",
     license="BSD",
     author="Pēteris Caune",

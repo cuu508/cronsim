@@ -1,6 +1,9 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## 2.6 - 2024-10-02
+- Add support for iteration backwards in time (#2)
+
 ## 2.5 - 2023-07-01
 - Add support for "LW" in the day-of-month field (#1)
 
