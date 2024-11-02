@@ -560,5 +560,71 @@ class TestExplain(unittest.TestCase):
         self.assertEqual(result, "Every minute")
 
 
+class TestReverse(unittest.TestCase):
+    samples = [
+        "* * * * *",
+        "0 * * * *",
+        "*/30 * * * *",
+        "*/15 * * * *",
+        "0 */2 * * *",
+        "30 */2 * * *",
+        "0 */3 * * *",
+        "0 1,2,3,4,5 * * *",
+        "30 1,2,3,4,5 * * *",
+        "0 2 * * *",
+        "0 3 * * *",
+        "0 4 * * *",
+        "0 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23 * * *",
+        "0 1,3,5,7,9,11,13,15,17,19,21,23 * * *",
+        "0 1-5 * * *",
+        "15 3 * * *",
+        "* 1-6 * * *",
+        "1 1 L * *",
+        "1 1 LW 5 *",
+        "1 1 * * 5L",
+        "1 1 * * 0L",
+        "1 1 * * 7L",
+        "1 1 * * 1#2",
+        "1 1 1-7 * */7",
+        "1 1 */100,1-7 * MON",
+        "1 1 * * */3",
+    ]
+    tz = ZoneInfo("Europe/Riga")
+
+    def _test(self, expr, now):
+        it = CronSim(expr, now)
+        crumbs = [next(it) for i in range(0, 5)]
+
+        reverse_it = CronSim(expr, crumbs.pop(), reverse=True)
+        while crumbs:
+            self.assertEqual(next(reverse_it), crumbs.pop())
+
+    def test_it_handles_naive_datetime(self) -> None:
+        for sample in self.samples:
+            self._test(sample, NOW)
+
+    def test_it_handles_utc(self) -> None:
+        now = NOW.replace(tzinfo=timezone.utc)
+        for sample in self.samples:
+            self._test(sample, now)
+
+    def test_it_handles_dst_mar(self) -> None:
+        now = datetime(2021, 3, 28, 1, 30, tzinfo=self.tz)
+        for sample in self.samples:
+            self._test(sample, now)
+
+    def test_it_handles_dst_oct(self) -> None:
+        now = datetime(2021, 10, 31, 1, 30, tzinfo=self.tz)
+        for sample in self.samples:
+            self._test(sample, now)
+
+    def test_it_handles_no_matches(self) -> None:
+        # The first date of the month *and* the fourth Monday of the month
+        # will never yield results:
+        it = CronSim("1 1 */100 * MON#4", NOW, reverse=True)
+        with self.assertRaises(StopIteration):
+            next(it)
+
+
 if __name__ == "__main__":
     unittest.main()
