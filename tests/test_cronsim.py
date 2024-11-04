@@ -113,6 +113,14 @@ class TestParse(unittest.TestCase):
         w = CronSim("* * * * sun-tue", NOW)
         self.assertEqual(w.weekdays, {0, 1, 2})
 
+    def test_it_parses_fri_sun(self) -> None:
+        w = CronSim("* * * * fri-sun", NOW)
+        self.assertEqual(w.weekdays, {0, 5, 6})
+
+    def test_it_parses_fri_tue(self) -> None:
+        w = CronSim("* * * * fri-tue", NOW)
+        self.assertEqual(w.weekdays, {0, 1, 2, 5, 6})
+
     def test_it_starts_weekday_step_from_zero(self) -> None:
         w = CronSim("* * * * */2", NOW)
         self.assertEqual(w.weekdays, {0, 2, 4, 6})

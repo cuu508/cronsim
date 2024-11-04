@@ -113,6 +113,11 @@ class Field(IntEnum):
             start = self.int(start_str)
             end = self.int(end_str)
 
+            # Support wrap-around DOW ranges such as fri-sun
+            if end < start and self == Field.DOW:
+                wrap = max(RANGES[self])
+                return set(d % wrap for d in range(start, wrap + end + 1))
+
             if end < start:
                 raise CronSimError(self.msg())
 
