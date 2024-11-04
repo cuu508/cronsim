@@ -1,4 +1,6 @@
 __pycache__
 cronsim.egg-info
 dist
+stash
 venv
+.venv

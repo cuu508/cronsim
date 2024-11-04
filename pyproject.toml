@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cronsim"
+version = "2.7-dev"
+authors = [{ name = "Pēteris Caune", email = "cuu508@monkeyseemonkeydo.lv" }]
+description = "Cron expression parser and evaluator"
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["cron", "cronjob", "crontab", "schedule"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Repository = "https://github.com/cuu508/cronsim.git"
+Issues = "https://github.com/cuu508/cronsim/issues"
+Changelog = "https://github.com/cuu508/cronsim/blob/main/CHANGELOG.md"
+
+[tool.setuptools]
+packages = ["cronsim"]
