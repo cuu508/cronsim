@@ -5,11 +5,11 @@ from datetime import date, datetime, time
 from datetime import timedelta as td
 from datetime import timezone
 from enum import IntEnum
-from typing import Set, Tuple, Union, cast
+from typing import cast
 
 UTC = timezone.utc
 
-SpecItem = Union[int, Tuple[int, int]]
+SpecItem = int | tuple[int, int]
 
 RANGES = [
     range(0, 60),
@@ -36,7 +36,7 @@ class Field(IntEnum):
     DOW = 4
 
     def msg(self) -> str:
-        return "Bad %s" % FIELD_NAMES[self]
+        return f"Bad {FIELD_NAMES[self]}"
 
     def _int(self, value: str) -> int:
         if value == "":
@@ -60,7 +60,7 @@ class Field(IntEnum):
 
         return v
 
-    def parse(self, s: str) -> Set[SpecItem]:
+    def parse(self, s: str) -> set[SpecItem]:
         if s == "*":
             return set(RANGES[self])
 
@@ -144,7 +144,7 @@ def last_weekday(year: int, month: int) -> int:
     return last_date
 
 
-class CronSim(object):
+class CronSim:
     LAST = -1000
     LAST_WEEKDAY = -1001
 
@@ -161,10 +161,10 @@ class CronSim(object):
         # Otherwise it's "OR".
         self.day_and = self.parts[2].startswith("*") or self.parts[4].startswith("*")
 
-        self.minutes = cast(Set[int], Field.MINUTE.parse(self.parts[0]))
-        self.hours = cast(Set[int], Field.HOUR.parse(self.parts[1]))
-        self.days = cast(Set[int], Field.DAY.parse(self.parts[2]))
-        self.months = cast(Set[int], Field.MONTH.parse(self.parts[3]))
+        self.minutes = cast(set[int], Field.MINUTE.parse(self.parts[0]))
+        self.hours = cast(set[int], Field.HOUR.parse(self.parts[1]))
+        self.days = cast(set[int], Field.DAY.parse(self.parts[2]))
+        self.months = cast(set[int], Field.MONTH.parse(self.parts[3]))
         self.weekdays = Field.DOW.parse(self.parts[4])
 
         if len(self.days) and min(self.days) > 29:
@@ -396,7 +396,7 @@ class CronSim(object):
 
         self.dt = datetime.combine(needle, time(23, 59), tzinfo=self.dt.tzinfo)
 
-    def __iter__(self) -> "CronSim":
+    def __iter__(self) -> CronSim:
         return self
 
     def advance(self) -> None:

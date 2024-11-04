@@ -76,7 +76,7 @@ def format_time(h: int, m: int) -> str:
     return f"{h:02d}:{m:02d}"
 
 
-class Field(object):
+class Field:
     name = "FIXME"
     symbolic: list[str] = []
     min_value = 0
@@ -449,7 +449,7 @@ class Weekday(Field):
         return "on " + super().__str__()
 
 
-class Expression(object):
+class Expression:
     def __init__(self, parts: list[str]):
         self.minute = Minute(parts[0])
         self.hour = Hour(parts[1])
