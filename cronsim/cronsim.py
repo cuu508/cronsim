@@ -5,11 +5,11 @@ from datetime import date, datetime, time
 from datetime import timedelta as td
 from datetime import timezone
 from enum import IntEnum
-from typing import cast
+from typing import cast, Union
 
 UTC = timezone.utc
 
-SpecItem = int | tuple[int, int]
+SpecItem = Union[int, tuple[int, int]]
 
 RANGES = [
     range(0, 60),
