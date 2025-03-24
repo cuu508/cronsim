@@ -72,13 +72,19 @@ class Field(IntEnum):
                 result.update(self.parse(term))
             return result
 
-        if self == Field.DOW and "L" in s:
-            value = s[:-1]
-            if not value.isdigit():
-                raise CronSimError(self.msg())
 
-            dow = self.int(s[:-1])
-            return {(dow, CronSim.LAST)}
+        if self == Field.DOW:
+            if s == "LB":
+                return {CronSim.LAST_WEEK_BUSINESSDAY}
+            elif s == "FB":
+                return {CronSim.FIRST_WEEK_BUSINESSDAY}
+            elif "L" in s:
+                value = s[:-1]
+                if not value.isdigit():
+                    raise CronSimError(self.msg())
+
+                dow = self.int(s[:-1])
+                return {(dow, CronSim.LAST)}
 
         if "#" in s and self == Field.DOW:
             term, nth_str = s.split("#", maxsplit=1)
@@ -171,6 +177,8 @@ class CronSim:
     LAST_WEEKDAY = -1001
     LAST_BUSINESSDAY = -1002
     FIRST_BUSINESSDAY = -1003
+    LAST_WEEK_BUSINESSDAY = -1004
+    FIRST_WEEK_BUSINESSDAY = -1005
 
     def __init__(
             self,
@@ -214,8 +222,14 @@ class CronSim:
                 self.dt = self.dt.replace(tzinfo=None)
 
         if not business_days_calendar:
-            if self.LAST_BUSINESSDAY in self.days or self.FIRST_BUSINESSDAY in self.days:
+            if self.LAST_BUSINESSDAY in self.days:
                 raise CronSimError(Field.DAY.msg())
+            if self.FIRST_BUSINESSDAY in self.days:
+                raise CronSimError(Field.DAY.msg())
+            if self.LAST_WEEK_BUSINESSDAY in self.weekdays:
+                raise CronSimError(Field.DOW.msg())
+            if self.FIRST_WEEK_BUSINESSDAY in self.weekdays:
+                raise CronSimError(Field.DOW.msg())
 
         self.business_days_calendar = business_days_calendar
 
@@ -317,8 +331,32 @@ class CronSim:
 
         return True
 
+    def get_first_business_day_of_week(self, d: date) -> date | None:
+        """
+        Given a date, get the first business day of the week.
+        Week is considered from Monday to Sunday.
+        """
+        monday = d - td(days=d.weekday())
+        for i in range(7):
+            current = monday + td(days=i)
+            if self.business_days_calendar.is_business_day(current):
+                return current
+        return None
+
+    def get_last_business_day_of_week(self, d: date) -> date | None:
+        """
+        Given a date, get the last business day of the week.
+        Week is considered from Monday to Sunday.
+        """
+        monday = d - td(days=d.weekday())
+        for i in range(6, -1, -1):
+            current = monday + td(days=i)
+            if self.business_days_calendar.is_business_day(current):
+                return current
+        return None
+
     @lru_cache(maxsize=128)
-    def get_first_day_of_month(self, year:int, month: int) -> date:
+    def get_first_business_day_of_month(self, year:int, month: int) -> date:
         """
         Given a date, get the first business day of that month.
         """
@@ -329,7 +367,7 @@ class CronSim:
             return self.business_days_calendar.get_next_business_day(first_day)
 
     @lru_cache(maxsize=128)
-    def get_last_day_of_month(self, year:int, month: int) -> date:
+    def get_last_business_day_of_month(self, year:int, month: int) -> date:
         """
         Given a date, get the last business day of that month.
         """
@@ -360,11 +398,11 @@ class CronSim:
                 return True
 
         if self.FIRST_BUSINESSDAY in self.days:
-            if d.day == self.get_first_day_of_month(d.year, d.month).day:
+            if d.day == self.get_first_business_day_of_month(d.year, d.month).day:
                 return True
 
         if self.LAST_BUSINESSDAY in self.days:
-            if d.day == self.get_last_day_of_month(d.year, d.month).day:
+            if d.day == self.get_last_business_day_of_month(d.year, d.month).day:
                 return True
 
         return False
@@ -380,6 +418,16 @@ class CronSim:
             if d.day + 7 > last:
                 # Same day next week would be outside this month.
                 # So this is the last one this month.
+                return True
+
+        if self.FIRST_WEEK_BUSINESSDAY in self.weekdays:
+            first_dow = self.get_first_business_day_of_week(d)
+            if first_dow == d:
+                return True
+
+        if self.LAST_WEEK_BUSINESSDAY in self.weekdays:
+            last_dow = self.get_last_business_day_of_week(d)
+            if last_dow == d:
                 return True
 
         idx = (d.day + 6) // 7

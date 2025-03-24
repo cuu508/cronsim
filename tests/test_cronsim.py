@@ -182,6 +182,21 @@ class TestParse(unittest.TestCase):
         w = CronSim("* * * * 5L", NOW)
         self.assertEqual(w.weekdays, {(5, CronSim.LAST)})
 
+    def test_it_accepts_weekday_fb(self) -> None:
+        w = CronSim("* * * * FB", NOW, business_days_calendar=BUSINESS_CALENDAR)
+        self.assertEqual(w.weekdays, {CronSim.FIRST_WEEK_BUSINESSDAY})
+
+    def test_it_parses_weekday_lb(self) -> None:
+        w = CronSim("* * * * LB", NOW, business_days_calendar=BUSINESS_CALENDAR)
+        self.assertEqual(w.weekdays, {CronSim.LAST_WEEK_BUSINESSDAY})
+
+    def test_it_parses_weekday_lowercase_fb(self) -> None:
+        w = CronSim("* * * * fb", NOW, business_days_calendar=BUSINESS_CALENDAR)
+        self.assertEqual(w.weekdays, {CronSim.FIRST_WEEK_BUSINESSDAY})
+
+    def test_it_parses_weekday_lowercase_lb(self) -> None:
+        w = CronSim("* * * * lb", NOW, business_days_calendar=BUSINESS_CALENDAR)
+        self.assertEqual(w.weekdays, {CronSim.LAST_WEEK_BUSINESSDAY})
 
 class TestValidation(unittest.TestCase):
     def test_it_rejects_4_components(self) -> None:
@@ -277,6 +292,13 @@ class TestValidation(unittest.TestCase):
         with self.assertRaisesRegex(CronSimError, "Bad day-of-month"):
             CronSim("* * lb * *", NOW)
 
+    def test_it_rejects_first_week_business_day_without_business_calendar(self) -> None:
+        with self.assertRaisesRegex(CronSimError, "Bad day-of-week"):
+            CronSim("* * * * fb", NOW)
+
+    def test_it_rejects_last_week_business_day_without_business_calendar(self) -> None:
+        with self.assertRaisesRegex(CronSimError, "Bad day-of-week"):
+            CronSim("* * * * lb", NOW)
 
 
 class TestIterator(unittest.TestCase):
@@ -343,7 +365,7 @@ class TestIterator(unittest.TestCase):
         self.assertEqual(next(it).isoformat(), "2020-01-05T01:01:00")
         self.assertEqual(next(it).isoformat(), "2020-01-08T01:01:00")
 
-class TestBusinessDays(unittest.TestCase):
+class TestBusinessDayOfMonth(unittest.TestCase):
     def assertNextEqual(self, iterator: Iterator[datetime], expected_iso: str) -> None:
         self.assertEqual(next(iterator).isoformat(), expected_iso)
 
@@ -374,6 +396,77 @@ class TestBusinessDays(unittest.TestCase):
         calendar_with_holiday = BusinessDaysCalendarWithBankHolidays()
         w = CronSim("0 9 lb * *", now, business_days_calendar=calendar_with_holiday)
         self.assertNextEqual(w, "2018-07-31T09:00:00")
+
+class TestBusinessDayOfWeek(unittest.TestCase):
+    def assertNextEqual(self, iterator: Iterator[datetime], expected_iso: str) -> None:
+       self.assertEqual(next(iterator).isoformat(), expected_iso)
+
+    def test_first_business_day_of_week(self) -> None:
+        now = datetime(2018, 6, 12, 13, 26, 10)
+        calendar_with_holiday = BusinessDaysCalendarWithBankHolidays("2018-09-03")
+        w = CronSim("0 9 * * fb", now, business_days_calendar=calendar_with_holiday)
+
+        self.assertNextEqual(w, "2018-06-18T09:00:00")
+        self.assertNextEqual(w, "2018-06-25T09:00:00")
+        self.assertNextEqual(w, "2018-07-02T09:00:00")
+        self.assertNextEqual(w, "2018-07-09T09:00:00")
+        self.assertNextEqual(w, "2018-07-16T09:00:00")
+        self.assertNextEqual(w, "2018-07-23T09:00:00")
+        self.assertNextEqual(w, "2018-07-30T09:00:00")
+        self.assertNextEqual(w, "2018-08-06T09:00:00")
+        self.assertNextEqual(w, "2018-08-13T09:00:00")
+        self.assertNextEqual(w, "2018-08-20T09:00:00")
+        self.assertNextEqual(w, "2018-08-27T09:00:00")
+        self.assertNextEqual(w, "2018-09-04T09:00:00")  # Skips Sept 3 (Labor Day)
+        self.assertNextEqual(w, "2018-09-10T09:00:00")
+        self.assertNextEqual(w, "2018-09-17T09:00:00")
+        self.assertNextEqual(w, "2018-09-24T09:00:00")
+
+    def test_first_business_day_of_week_with_all_holidays(self) -> None:
+        now = datetime(2018, 6, 16, 13, 26, 10)  # Saturday
+        calendar_with_holiday = BusinessDaysCalendarWithBankHolidays(
+            "2018-06-18",
+            "2018-06-19",
+            "2018-06-20",
+            "2018-06-21",
+            "2018-06-22",
+        )
+        w = CronSim("0 9 * * fb", now, business_days_calendar=calendar_with_holiday)
+
+        self.assertNextEqual(w, "2018-06-25T09:00:00")
+
+    def test_last_business_day_of_week(self) -> None:
+        now = datetime(2019, 4, 1, 13, 26, 10)
+        calendar_with_holiday = BusinessDaysCalendarWithBankHolidays("2019-04-19")
+        w = CronSim("0 9 * * lb", now, business_days_calendar=calendar_with_holiday)
+
+        self.assertNextEqual(w, "2019-04-05T09:00:00")
+        self.assertNextEqual(w, "2019-04-12T09:00:00")
+        self.assertNextEqual(w, "2019-04-18T09:00:00")  # Good Friday (19th) skipped
+        self.assertNextEqual(w, "2019-04-26T09:00:00")
+        self.assertNextEqual(w, "2019-05-03T09:00:00")
+        self.assertNextEqual(w, "2019-05-10T09:00:00")
+        self.assertNextEqual(w, "2019-05-17T09:00:00")
+        self.assertNextEqual(w, "2019-05-24T09:00:00")
+        self.assertNextEqual(w, "2019-05-31T09:00:00")
+        self.assertNextEqual(w, "2019-06-07T09:00:00")
+        self.assertNextEqual(w, "2019-06-14T09:00:00")
+        self.assertNextEqual(w, "2019-06-21T09:00:00")
+        self.assertNextEqual(w, "2019-06-28T09:00:00")
+        self.assertNextEqual(w, "2019-07-05T09:00:00")
+
+    def test_last_business_day_of_week_with_all_holidays(self) -> None:
+        now = datetime(2019, 3, 31, 13, 26, 10)
+        calendar_with_holiday = BusinessDaysCalendarWithBankHolidays(
+            "2019-04-01",
+            "2019-04-02",
+            "2019-04-03",
+            "2019-04-04",
+            "2019-04-05",
+        )
+        w = CronSim("0 9 * * lb", now, business_days_calendar=calendar_with_holiday)
+
+        self.assertNextEqual(w, "2019-04-12T09:00:00")
 
 
 class TestDstTransitions(unittest.TestCase):
