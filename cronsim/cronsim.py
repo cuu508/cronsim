@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import calendar
+from abc import ABC, abstractmethod
 from datetime import date, datetime, time
 from datetime import timedelta as td
 from datetime import timezone
 from enum import IntEnum
+from functools import lru_cache
 from typing import cast, Union
 
 UTC = timezone.utc
@@ -124,6 +126,12 @@ class Field(IntEnum):
         if self == Field.DAY and s == "L":
             return {CronSim.LAST}
 
+        if self == Field.DAY and s == "LB":
+            return {CronSim.LAST_BUSINESSDAY}
+
+        if self == Field.DAY and s == "FB":
+            return {CronSim.FIRST_BUSINESSDAY}
+
         return {self.int(s)}
 
 
@@ -144,11 +152,33 @@ def last_weekday(year: int, month: int) -> int:
     return last_date
 
 
+class BusinessDaysCalendar(ABC):
+    @abstractmethod
+    def is_business_day(self, d: date) -> bool:
+        pass
+
+    @abstractmethod
+    def get_previous_business_day(self, d: date) -> date:
+        pass
+
+    @abstractmethod
+    def get_next_business_day(self, d: date) -> date:
+        pass
+
+
 class CronSim:
     LAST = -1000
     LAST_WEEKDAY = -1001
+    LAST_BUSINESSDAY = -1002
+    FIRST_BUSINESSDAY = -1003
 
-    def __init__(self, expr: str, dt: datetime, reverse: bool = False):
+    def __init__(
+            self,
+            expr: str,
+            dt: datetime,
+            reverse: bool = False,
+            business_days_calendar: BusinessDaysCalendar | None = None
+    ):
         self.dt = dt.replace(second=0, microsecond=0)
         self.tick_direction = -1 if reverse else 1
 
@@ -182,6 +212,12 @@ class CronSim:
                 # with a granularity greater than one hour (to mimic Debian cron).
                 self.fixup_tz = self.dt.tzinfo
                 self.dt = self.dt.replace(tzinfo=None)
+
+        if not business_days_calendar:
+            if self.LAST_BUSINESSDAY in self.days or self.FIRST_BUSINESSDAY in self.days:
+                raise CronSimError(Field.DAY.msg())
+
+        self.business_days_calendar = business_days_calendar
 
     def tick(self, minutes: int = 1) -> None:
         """Roll self.dt in `tick_direction` by 1 or more minutes and fix timezone."""
@@ -281,6 +317,29 @@ class CronSim:
 
         return True
 
+    @lru_cache(maxsize=128)
+    def get_first_day_of_month(self, year:int, month: int) -> date:
+        """
+        Given a date, get the first business day of that month.
+        """
+        first_day = date(year=year, month=month, day=1)
+        if self.business_days_calendar.is_business_day(first_day):
+            return first_day
+        else:
+            return self.business_days_calendar.get_next_business_day(first_day)
+
+    @lru_cache(maxsize=128)
+    def get_last_day_of_month(self, year:int, month: int) -> date:
+        """
+        Given a date, get the last business day of that month.
+        """
+        _, last = calendar.monthrange(year, month)
+        last_day = date(year=year, month=month, day=last)
+        if self.business_days_calendar.is_business_day(last_day):
+            return last_day
+        else:
+            return self.business_days_calendar.get_previous_business_day(last_day)
+
     def match_dom(self, d: date) -> bool:
         """Return True is day-of-month matches."""
         if d.day in self.days:
@@ -298,6 +357,14 @@ class CronSim:
         if self.LAST in self.days and d.day >= 28:
             _, last = calendar.monthrange(d.year, d.month)
             if d.day == last:
+                return True
+
+        if self.FIRST_BUSINESSDAY in self.days:
+            if d.day == self.get_first_day_of_month(d.year, d.month).day:
+                return True
+
+        if self.LAST_BUSINESSDAY in self.days:
+            if d.day == self.get_last_day_of_month(d.year, d.month).day:
                 return True
 
         return False

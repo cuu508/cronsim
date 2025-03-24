@@ -4,3 +4,6 @@ dist
 stash
 venv
 .venv
+.*.swp
+.exrc
+.mise.*
