@@ -143,6 +143,12 @@ for examples of this special handling.
 | "LW" as the day-of-month             | No     | Yes    | No       | Yes     |
 | "L" in the day-of-week field         | No     | Yes    | No       | Yes     |
 | Nth weekday of month                 | No     | Yes    | Yes      | Yes     |
+| "FB" as the day-of-month             | No     |  No    |  No      | Yes     |
+| "LB" as the day-of-month             | No     |  No    |  No      | Yes     |
+| "FB" as the day-of-week              | No     |  No    |  No      | Yes     |
+| "LB" as the day-of-week              | No     |  No    |  No      | Yes     |
+| "B" as the day-of-week               | No     |  No    |  No      | Yes     |
+| "EB" as the hour/minute              | No     |  No    |  No      | Yes     |
 
 
 **Seconds in the 6th field**: an optional sixth field specifying seconds.
@@ -171,6 +177,47 @@ For example, "MON#1" means "first Monday of the month", "MON#2" means "second Mo
 of the month".
 
 Example: `0 0 * * MON#1` (at midnight of the first monday of every month).
+
+**"B"/"LB"/"FB" in the day-of-week field**: interpreted as "the business/last
+business/first business day of the week".
+
+Example: `0 0 * * LB` (at the midnight of the last business day of every week).
+
+**"LB"/"FB" in the day-of-month field**: interpreted as "the last/first
+business day of the month".
+
+Example: `0 0 FB * *` (at the midnight of the first business day of every month).
+
+**"EB" in the hours/minutes field**: interpreted as "end of day time". If "EB"
+is used in hours field then minutes should be `EB` or `*` which are interpreted
+the same way.
+
+Example: `* EB * * 5` (at the end of day every Friday).
+
+## Business days/hours
+
+In order to use business days/hours features you need to provide your own
+implementation for the `BusinessDaysCalendar` class which defines which days
+are business days and also defines end of day times.
+
+```
+class BusinessDaysCalendar(ABC):
+    @abstractmethod
+    def is_business_day(self, d: date) -> bool:
+        pass
+
+    @abstractmethod
+    def get_previous_business_day(self, d: date) -> date:
+        pass
+
+    @abstractmethod
+    def get_next_business_day(self, d: date) -> date:
+        pass
+
+    @abstractmethod
+    def get_end_of_day(self, dt: datetime) -> datetime:
+        pass
+```
 
 ## The `explain()` Method
 
