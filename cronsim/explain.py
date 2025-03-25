@@ -82,6 +82,13 @@ class Field:
     min_value = 0
     max_value = 0
 
+    LAST = -1
+    LAST_WEEKDAY = -2
+    FIRST_BUSINESSDAY = -3
+    LAST_BUSINESSDAY = -4
+    BUSINESSDAY = -5
+    END_OF_BUSINESSDAY = -6
+
     def __init__(self, value: str):
         self.value = value
         self.parsed: list[Sequence] = []
@@ -123,9 +130,11 @@ class Field:
                 if term == "*":
                     yield Sequence(step=step)
                 elif term == "LW":
-                    yield Sequence(start=-2, stop=-2, nth=-1)
+                    yield Sequence(
+                        start=self.LAST_WEEKDAY, stop=self.LAST_WEEKDAY, nth=-1
+                    )
                 elif term == "L":
-                    yield Sequence(start=-1, stop=-1, nth=-1)
+                    yield Sequence(start=self.LAST, stop=self.LAST, nth=-1)
                 else:
                     if "-" in term:
                         start_str, stop_str = term.split("-")
@@ -150,9 +159,29 @@ class Field:
                 else:
                     yield Sequence(start=start, stop=stop)
             elif term == "LW":
-                yield Sequence(start=-2, stop=-2, nth=-1)
+                yield Sequence(start=self.LAST_WEEKDAY, stop=self.LAST_WEEKDAY, nth=-1)
             elif term == "L":
-                yield Sequence(start=-1, stop=-1, nth=-1)
+                yield Sequence(start=self.LAST, stop=self.LAST, nth=-1)
+            elif term == "FB":
+                yield Sequence(
+                    start=self.FIRST_BUSINESSDAY,
+                    stop=self.FIRST_BUSINESSDAY,
+                    nth=-1,
+                )
+            elif term == "LB":
+                yield Sequence(
+                    start=self.LAST_BUSINESSDAY,
+                    stop=self.LAST_BUSINESSDAY,
+                    nth=-1,
+                )
+            elif term == "B":
+                yield Sequence(start=self.BUSINESSDAY, stop=self.BUSINESSDAY, nth=-1)
+            elif term == "EB":
+                yield Sequence(
+                    start=self.END_OF_BUSINESSDAY,
+                    stop=self.END_OF_BUSINESSDAY,
+                    nth=-1,
+                )
             else:
                 v = self._int(term)
                 yield Sequence(start=v, stop=v)
@@ -325,10 +354,14 @@ class Day(Field):
         >>> format_nth(-2)
         'the last weekday of the month'
         """
-        if nth == -1 and value == -1:
+        if nth == -1 and value == self.LAST:
             return "the last day of the month"
-        if nth == -1 and value == -2:
+        if nth == -1 and value == self.LAST_WEEKDAY:
             return "the last weekday of the month"
+        if nth == -1 and value == self.FIRST_BUSINESSDAY:
+            return "the first business day of the month"
+        if nth == -1 and value == self.LAST_BUSINESSDAY:
+            return "the last business day of the month"
         return super().format_nth(value, nth)
 
     def format(self) -> str:
@@ -421,7 +454,14 @@ class Weekday(Field):
         """
         label = self.label(value)
         if nth == -1:
-            return f"the last {label} of the month"
+            if value == self.FIRST_BUSINESSDAY:
+                return f"the first business day of every week"
+            elif value == self.LAST_BUSINESSDAY:
+                return f"the last business day of every week"
+            elif value == self.BUSINESSDAY:
+                return f"every business day of every week"
+            else:
+                return f"the last {label} of the month"
 
         return f"the {ordinal(nth)} {label} of the month"
 
@@ -474,6 +514,8 @@ class Expression:
         """
         # at 11:00, 11:30, ...
         if self.hour.all_singles and self.minute.all_singles:
+            if self.hour.parsed[0].start == self.hour.END_OF_BUSINESSDAY:
+                return "at the end of day", True
             minute_terms, hour_terms = self.minute.singles(), self.hour.singles()
 
             if len(minute_terms) * len(hour_terms) <= 4:
@@ -494,6 +536,8 @@ class Expression:
 
         # every minute from 9:00 through 17:59
         if len(self.hour.parsed) == 1 and len(self.minute.parsed) == 1:
+            if self.hour.parsed[0].start == self.hour.END_OF_BUSINESSDAY:
+                return "at the end of day", True
             mseq = self.minute.parsed[0]
             if mseq.start is None:
                 hseq = self.hour.parsed[0]
@@ -524,10 +568,14 @@ class Expression:
         """
 
         if self.dow.star:
-            if self.day.single_value == -1:
+            if self.day.single_value == self.dow.LAST:
                 return f"on the last day of {self.month.format()}"
-            if self.day.single_value == -2:
+            if self.day.single_value == self.dow.LAST_WEEKDAY:
                 return f"on the last weekday of {self.month.format()}"
+            if self.day.single_value == self.dow.FIRST_BUSINESSDAY:
+                return f"on the first business day of {self.month.format()}"
+            if self.day.single_value == self.dow.LAST_BUSINESSDAY:
+                return f"on the last business day of {self.month.format()}"
             if self.month.single_value and self.day.single_value:
                 return f"on {self.month.format()} {self.day.single_value}"
             if self.day.single_value:

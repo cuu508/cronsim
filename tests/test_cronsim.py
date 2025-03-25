@@ -1016,9 +1016,24 @@ class TestOptimizations(unittest.TestCase):
 
 
 class TestExplain(unittest.TestCase):
+    business_days_samples = [
+        ("* * fb * *",  "Every minute on the first business day of every month"),
+        ("* * lb * *",  "Every minute on the last business day of every month"),
+        ("* * * * fb",  "Every minute on the first business day of every week"),
+        ("* * * * lb",  "Every minute on the last business day of every week"),
+        ("* * * * b",  "Every minute on every business day of every week"),
+        ("* * * * b",  "Every minute on every business day of every week"),
+        ("eb eb * * *",  "At the end of day every day"),
+        ("* eb * * *",  "At the end of day every day"),
+    ]
     def test_it_works(self) -> None:
         result = CronSim("* * * * *", NOW).explain()
         self.assertEqual(result, "Every minute")
+
+    def test_business_days(self) -> None:
+        for cron_expr, expected_explain in self.business_days_samples:
+            cron_sim = CronSim(cron_expr, NOW, business_days_calendar=BUSINESS_CALENDAR)
+            self.assertEqual(cron_sim.explain(), expected_explain)
 
 
 class TestReverse(unittest.TestCase):
