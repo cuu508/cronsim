@@ -17,10 +17,21 @@ NOW = datetime(2020, 1, 1)
 
 
 class BusinessDaysCalendarWithBankHolidays(BusinessDaysCalendar):
-    def __init__(self, *bank_holidays: str):
+    def __init__(
+            self,
+            *bank_holidays: str,
+            cut_off_time: str = "18:00",
+            cut_off_times: dict[str, str] | None = None,
+    ):
         self.bank_holidays = [
             datetime.strptime(d, "%Y-%m-%d").date() for d in bank_holidays
-    ]
+        ]
+        self.cut_off_time = datetime.strptime(cut_off_time, "%H:%M").time()
+        self.cut_off_times = {}
+        for d_str, t_str in (cut_off_times or {}).items():
+            dt = datetime.strptime(d_str, "%Y-%m-%d").date()
+            t = datetime.strptime(t_str, "%H:%M").time()
+            self.cut_off_times[dt] = t
 
     def is_business_day(self, d: date) -> bool:
         return (
@@ -39,6 +50,13 @@ class BusinessDaysCalendarWithBankHolidays(BusinessDaysCalendar):
         while not self.is_business_day(d):
             d += timedelta(days=1)
         return d
+
+    def get_end_of_day(self, dt: datetime) -> datetime:
+        if dt.date() in self.cut_off_times:
+            cut_off_time = self.cut_off_times[dt.date()]
+        else:
+            cut_off_time = self.cut_off_time
+        return datetime.combine(dt, cut_off_time)
 
 
 BUSINESS_CALENDAR = BusinessDaysCalendarWithBankHolidays()
@@ -182,7 +200,7 @@ class TestParse(unittest.TestCase):
         w = CronSim("* * * * 5L", NOW)
         self.assertEqual(w.weekdays, {(5, CronSim.LAST)})
 
-    def test_it_accepts_weekday_fb(self) -> None:
+    def test_it_parses_weekday_fb(self) -> None:
         w = CronSim("* * * * FB", NOW, business_days_calendar=BUSINESS_CALENDAR)
         self.assertEqual(w.weekdays, {CronSim.FIRST_WEEK_BUSINESSDAY})
 
@@ -197,6 +215,17 @@ class TestParse(unittest.TestCase):
     def test_it_parses_weekday_lowercase_lb(self) -> None:
         w = CronSim("* * * * lb", NOW, business_days_calendar=BUSINESS_CALENDAR)
         self.assertEqual(w.weekdays, {CronSim.LAST_WEEK_BUSINESSDAY})
+
+    def test_it_parses_hour_eb(self) -> None:
+        w = CronSim("* EB * * *", NOW, business_days_calendar=BUSINESS_CALENDAR)
+        self.assertEqual(w.hours, {CronSim.END_OF_BUSINESSDAY})
+        self.assertEqual(w.minutes, {CronSim.END_OF_BUSINESSDAY})
+
+    def test_it_parses_hour_lowercase_eb(self) -> None:
+        w = CronSim("* eb * * *", NOW, business_days_calendar=BUSINESS_CALENDAR)
+        self.assertEqual(w.hours, {CronSim.END_OF_BUSINESSDAY})
+        self.assertEqual(w.minutes, {CronSim.END_OF_BUSINESSDAY})
+
 
 class TestValidation(unittest.TestCase):
     def test_it_rejects_4_components(self) -> None:
@@ -299,6 +328,14 @@ class TestValidation(unittest.TestCase):
     def test_it_rejects_last_week_business_day_without_business_calendar(self) -> None:
         with self.assertRaisesRegex(CronSimError, "Bad day-of-week"):
             CronSim("* * * * lb", NOW)
+
+    def test_it_rejects_end_of_business_day_without_business_calendar(self) -> None:
+        with self.assertRaisesRegex(CronSimError, "Bad hour"):
+            CronSim("* eb * * *", NOW)
+
+    def test_it_rejects_end_of_business_day_hour_with_specific_minute(self) -> None:
+        with self.assertRaisesRegex(CronSimError, "Bad minute"):
+            CronSim("1 eb * * *", NOW, business_days_calendar=BUSINESS_CALENDAR)
 
 
 class TestIterator(unittest.TestCase):
@@ -467,6 +504,80 @@ class TestBusinessDayOfWeek(unittest.TestCase):
         w = CronSim("0 9 * * lb", now, business_days_calendar=calendar_with_holiday)
 
         self.assertNextEqual(w, "2019-04-12T09:00:00")
+
+
+class TestEndOfBusinessDay(unittest.TestCase):
+    ET = ZoneInfo("America/New_York")
+
+    def assertNextEqual(self, iterator: Iterator[datetime], expected_iso: str) -> None:
+       self.assertEqual(next(iterator).isoformat(), expected_iso)
+
+    def test_end_of_business_day(self) -> None:
+        now = datetime(2019, 4, 17, 13, 26, 10, tzinfo=self.ET)
+        calendar = BusinessDaysCalendarWithBankHolidays(
+            "2019-04-19", cut_off_time="15:00"
+        )
+        w = CronSim("* eb * * *", now, business_days_calendar=calendar)
+
+        self.assertNextEqual(w, "2019-04-17T15:00:00-04:00")
+        self.assertNextEqual(w, "2019-04-18T15:00:00-04:00")
+        self.assertNextEqual(w, "2019-04-22T15:00:00-04:00")
+        self.assertNextEqual(w, "2019-04-23T15:00:00-04:00")
+        self.assertNextEqual(w, "2019-04-24T15:00:00-04:00")
+        self.assertNextEqual(w, "2019-04-25T15:00:00-04:00")
+        self.assertNextEqual(w, "2019-04-26T15:00:00-04:00")
+        self.assertNextEqual(w, "2019-04-29T15:00:00-04:00")
+        self.assertNextEqual(w, "2019-04-30T15:00:00-04:00")
+        self.assertNextEqual(w, "2019-05-01T15:00:00-04:00")
+
+    def test_end_of_business_day_day_ends_at_half_past(self) -> None:
+        now = datetime(2019, 4, 17, 13, 26, 10, tzinfo=self.ET)
+        calendar = BusinessDaysCalendarWithBankHolidays(
+            "2019-04-19", cut_off_time="15:30"
+        )
+        w = CronSim("eb eb * * *", now, business_days_calendar=calendar)
+
+        self.assertNextEqual(w, "2019-04-17T15:30:00-04:00")
+        self.assertNextEqual(w, "2019-04-18T15:30:00-04:00")
+        self.assertNextEqual(w, "2019-04-22T15:30:00-04:00")
+        self.assertNextEqual(w, "2019-04-23T15:30:00-04:00")
+        self.assertNextEqual(w, "2019-04-24T15:30:00-04:00")
+        self.assertNextEqual(w, "2019-04-25T15:30:00-04:00")
+        self.assertNextEqual(w, "2019-04-26T15:30:00-04:00")
+        self.assertNextEqual(w, "2019-04-29T15:30:00-04:00")
+        self.assertNextEqual(w, "2019-04-30T15:30:00-04:00")
+        self.assertNextEqual(w, "2019-05-01T15:30:00-04:00")
+
+    def test_end_of_business_day_handles_daylight_savings(self) -> None:
+        now = datetime(2019, 3, 6, 13, 26, 10, tzinfo=self.ET)
+        calendar = BusinessDaysCalendarWithBankHolidays(cut_off_time="15:30")
+        w = CronSim("eb eb * * *", now, business_days_calendar=calendar)
+
+        self.assertNextEqual(w, "2019-03-06T15:30:00-05:00")
+        self.assertNextEqual(w, "2019-03-07T15:30:00-05:00")
+        self.assertNextEqual(w, "2019-03-08T15:30:00-05:00")
+        self.assertNextEqual(w, "2019-03-11T15:30:00-04:00")
+        self.assertNextEqual(w, "2019-03-12T15:30:00-04:00")
+
+    def test_end_of_business_day_handles_microseconds(self) -> None:
+        now = datetime(2019, 10, 31, 10, 26, 10, 191, tzinfo=self.ET)
+        calendar = BusinessDaysCalendarWithBankHolidays(cut_off_time="15:00")
+        w = CronSim("eb eb * * *", now, business_days_calendar=calendar)
+
+        self.assertNextEqual(w, "2019-10-31T15:00:00-04:00")
+
+    def test_end_of_business_day_handles_early_close(self) -> None:
+        now = datetime(2019, 11, 27, 8, 26, 10, tzinfo=self.ET)
+        calendar = BusinessDaysCalendarWithBankHolidays(
+            "2019-11-28",
+            cut_off_time="15:20",
+            cut_off_times={"2019-11-29": "13:30"},
+        )
+        w = CronSim("* eb * * *", now, business_days_calendar=calendar)
+
+        self.assertNextEqual(w, "2019-11-27T15:20:00-05:00")
+        self.assertNextEqual(w, "2019-11-29T13:30:00-05:00")
+        self.assertNextEqual(w, "2019-12-02T15:20:00-05:00")
 
 
 class TestDstTransitions(unittest.TestCase):

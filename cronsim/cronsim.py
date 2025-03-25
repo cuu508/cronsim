@@ -138,6 +138,9 @@ class Field(IntEnum):
         if self == Field.DAY and s == "FB":
             return {CronSim.FIRST_BUSINESSDAY}
 
+        if self in {Field.HOUR, Field.MINUTE} and s == "EB":
+            return {CronSim.END_OF_BUSINESSDAY}
+
         return {self.int(s)}
 
 
@@ -171,6 +174,10 @@ class BusinessDaysCalendar(ABC):
     def get_next_business_day(self, d: date) -> date:
         pass
 
+    @abstractmethod
+    def get_end_of_day(self, dt: datetime) -> datetime:
+        pass
+
 
 class CronSim:
     LAST = -1000
@@ -179,6 +186,7 @@ class CronSim:
     FIRST_BUSINESSDAY = -1003
     LAST_WEEK_BUSINESSDAY = -1004
     FIRST_WEEK_BUSINESSDAY = -1005
+    END_OF_BUSINESSDAY = -1006
 
     def __init__(
             self,
@@ -199,8 +207,13 @@ class CronSim:
         # Otherwise it's "OR".
         self.day_and = self.parts[2].startswith("*") or self.parts[4].startswith("*")
 
-        self.minutes = cast(set[int], Field.MINUTE.parse(self.parts[0]))
         self.hours = cast(set[int], Field.HOUR.parse(self.parts[1]))
+        if self.END_OF_BUSINESSDAY in self.hours:
+            if self.parts[0] not in ["*", "EB"]:
+                raise CronSimError(Field.MINUTE.msg())
+            self.minutes = {self.END_OF_BUSINESSDAY}
+        else:
+            self.minutes = cast(set[int], Field.MINUTE.parse(self.parts[0]))
         self.days = cast(set[int], Field.DAY.parse(self.parts[2]))
         self.months = cast(set[int], Field.MONTH.parse(self.parts[3]))
         self.weekdays = Field.DOW.parse(self.parts[4])
@@ -230,6 +243,10 @@ class CronSim:
                 raise CronSimError(Field.DOW.msg())
             if self.FIRST_WEEK_BUSINESSDAY in self.weekdays:
                 raise CronSimError(Field.DOW.msg())
+            if self.END_OF_BUSINESSDAY in self.hours:
+                raise CronSimError(Field.HOUR.msg())
+
+        self.match_business_day = self.END_OF_BUSINESSDAY in self.hours
 
         self.business_days_calendar = business_days_calendar
 
@@ -247,6 +264,17 @@ class CronSim:
         else:
             self.dt += td(minutes=minutes * self.tick_direction)
 
+    def match_minute(self, dt: datetime) -> bool:
+        """Return True is minute matches."""
+        if self.END_OF_BUSINESSDAY in self.minutes:
+            if dt.minute == self.business_days_calendar.get_end_of_day(dt).minute:
+                return True
+        else:
+            if dt.minute in self.minutes:
+                return True
+
+        return False
+
     def advance_minute(self) -> bool:
         """Roll forward the minute component until it satisfies the constraints.
 
@@ -255,10 +283,10 @@ class CronSim:
 
         """
 
-        if self.dt.minute in self.minutes:
+        if self.match_minute(self.dt):
             return False
 
-        if len(self.minutes) == 1:
+        if len(self.minutes) == 1 and self.END_OF_BUSINESSDAY not in self.minutes:
             # An optimization for the special case where self.minutes has exactly
             # one element. Instead of advancing one minute per iteration,
             # make a jump from the current minute to the target minute.
@@ -266,7 +294,7 @@ class CronSim:
             delta = (target_minute - self.dt.minute) % 60
             self.tick(minutes=delta)
 
-        while self.dt.minute not in self.minutes:
+        while not self.match_minute(self.dt):
             self.tick()
             if self.dt.minute == 0:
                 # Break out to re-check month, day and hour
@@ -277,10 +305,10 @@ class CronSim:
     def reverse_minute(self) -> bool:
         """Roll backward the minute component until it satisfies the constraints."""
 
-        if self.dt.minute in self.minutes:
+        if self.match_minute(self.dt):
             return False
 
-        if len(self.minutes) == 1:
+        if len(self.minutes) == 1 and self.END_OF_BUSINESSDAY not in self.minutes:
             # An optimization for the special case where self.minutes has exactly
             # one element. Instead of advancing one minute per iteration,
             # make a jump from the current minute to the target minute.
@@ -288,13 +316,24 @@ class CronSim:
             delta = (self.dt.minute - target_minute) % 60
             self.tick(minutes=delta)
 
-        while self.dt.minute not in self.minutes:
+        while not self.match_minute(self.dt):
             self.tick()
             if self.dt.minute == 59:
                 # Break out to re-check month, day and hour
                 break
 
         return True
+
+    def match_hour(self, dt: datetime) -> bool:
+        """Return True is hour matches."""
+        if dt.hour in self.hours:
+            return True
+
+        if self.END_OF_BUSINESSDAY in self.hours:
+            if dt.hour == self.business_days_calendar.get_end_of_day(dt).hour:
+                return True
+
+        return False
 
     def advance_hour(self) -> bool:
         """Roll forward the hour component until it satisfies the constraints.
@@ -304,11 +343,11 @@ class CronSim:
 
         """
 
-        if self.dt.hour in self.hours:
+        if self.match_hour(self.dt):
             return False
 
         self.dt = self.dt.replace(minute=0)
-        while self.dt.hour not in self.hours:
+        while not self.match_hour(self.dt):
             self.tick(minutes=60)
             if self.dt.hour == 0:
                 # break out to re-check month and day
@@ -319,11 +358,11 @@ class CronSim:
     def reverse_hour(self) -> bool:
         """Roll backward the hour component until it satisfies the constraints."""
 
-        if self.dt.hour in self.hours:
+        if self.match_hour(self.dt):
             return False
 
         self.dt = self.dt.replace(minute=59)
-        while self.dt.hour not in self.hours:
+        while not self.match_hour(self.dt):
             self.tick(minutes=60)
             if self.dt.hour == 23:
                 # break out to re-check month and day
@@ -356,7 +395,7 @@ class CronSim:
         return None
 
     @lru_cache(maxsize=128)
-    def get_first_business_day_of_month(self, year:int, month: int) -> date:
+    def get_first_business_day_of_month(self, year: int, month: int) -> date:
         """
         Given a date, get the first business day of that month.
         """
@@ -367,7 +406,7 @@ class CronSim:
             return self.business_days_calendar.get_next_business_day(first_day)
 
     @lru_cache(maxsize=128)
-    def get_last_business_day_of_month(self, year:int, month: int) -> date:
+    def get_last_business_day_of_month(self, year: int, month: int) -> date:
         """
         Given a date, get the last business day of that month.
         """
@@ -381,7 +420,10 @@ class CronSim:
     def match_dom(self, d: date) -> bool:
         """Return True is day-of-month matches."""
         if d.day in self.days:
-            return True
+            if self.match_business_day:
+                return self.business_days_calendar.is_business_day(d)
+            else:
+                return True
 
         # Optimization: there are no months with fewer than 28 days.
         # If 28th is Sunday, the last weekday of the month is the 26th.
