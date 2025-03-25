@@ -20,18 +20,18 @@ class BusinessDaysCalendarWithBankHolidays(BusinessDaysCalendar):
     def __init__(
             self,
             *bank_holidays: str,
-            cut_off_time: str = "18:00",
-            cut_off_times: dict[str, str] | None = None,
+            eod_time: str = "18:00",
+            eod_times: dict[str, str] | None = None,
     ):
         self.bank_holidays = [
             datetime.strptime(d, "%Y-%m-%d").date() for d in bank_holidays
         ]
-        self.cut_off_time = datetime.strptime(cut_off_time, "%H:%M").time()
-        self.cut_off_times = {}
-        for d_str, t_str in (cut_off_times or {}).items():
+        self.eod_time = datetime.strptime(eod_time, "%H:%M").time()
+        self.eod_times = {}
+        for d_str, t_str in (eod_times or {}).items():
             dt = datetime.strptime(d_str, "%Y-%m-%d").date()
             t = datetime.strptime(t_str, "%H:%M").time()
-            self.cut_off_times[dt] = t
+            self.eod_times[dt] = t
 
     def is_business_day(self, d: date) -> bool:
         return (
@@ -52,11 +52,11 @@ class BusinessDaysCalendarWithBankHolidays(BusinessDaysCalendar):
         return d
 
     def get_end_of_day(self, dt: datetime) -> datetime:
-        if dt.date() in self.cut_off_times:
-            cut_off_time = self.cut_off_times[dt.date()]
+        if dt.date() in self.eod_times:
+            eod_time = self.eod_times[dt.date()]
         else:
-            cut_off_time = self.cut_off_time
-        return datetime.combine(dt, cut_off_time)
+            eod_time = self.eod_time
+        return datetime.combine(dt, eod_time)
 
 
 BUSINESS_CALENDAR = BusinessDaysCalendarWithBankHolidays()
@@ -524,7 +524,7 @@ class TestEndOfBusinessDay(unittest.TestCase):
     def test_end_of_business_day(self) -> None:
         now = datetime(2019, 4, 17, 13, 26, 10, tzinfo=self.ET)
         calendar = BusinessDaysCalendarWithBankHolidays(
-            "2019-04-19", cut_off_time="15:00"
+            "2019-04-19", eod_time="15:00"
         )
         w = CronSim("* eb * * *", now, business_days_calendar=calendar)
 
@@ -542,7 +542,7 @@ class TestEndOfBusinessDay(unittest.TestCase):
     def test_end_of_business_day_day_ends_at_half_past(self) -> None:
         now = datetime(2019, 4, 17, 13, 26, 10, tzinfo=self.ET)
         calendar = BusinessDaysCalendarWithBankHolidays(
-            "2019-04-19", cut_off_time="15:30"
+            "2019-04-19", eod_time="15:30"
         )
         w = CronSim("eb eb * * *", now, business_days_calendar=calendar)
 
@@ -559,7 +559,7 @@ class TestEndOfBusinessDay(unittest.TestCase):
 
     def test_end_of_business_day_handles_daylight_savings(self) -> None:
         now = datetime(2019, 3, 6, 13, 26, 10, tzinfo=self.ET)
-        calendar = BusinessDaysCalendarWithBankHolidays(cut_off_time="15:30")
+        calendar = BusinessDaysCalendarWithBankHolidays(eod_time="15:30")
         w = CronSim("eb eb * * *", now, business_days_calendar=calendar)
 
         self.assertNextEqual(w, "2019-03-06T15:30:00-05:00")
@@ -570,7 +570,7 @@ class TestEndOfBusinessDay(unittest.TestCase):
 
     def test_end_of_business_day_handles_microseconds(self) -> None:
         now = datetime(2019, 10, 31, 10, 26, 10, 191, tzinfo=self.ET)
-        calendar = BusinessDaysCalendarWithBankHolidays(cut_off_time="15:00")
+        calendar = BusinessDaysCalendarWithBankHolidays(eod_time="15:00")
         w = CronSim("eb eb * * *", now, business_days_calendar=calendar)
 
         self.assertNextEqual(w, "2019-10-31T15:00:00-04:00")
@@ -578,9 +578,7 @@ class TestEndOfBusinessDay(unittest.TestCase):
     def test_end_of_business_day_handles_early_close(self) -> None:
         now = datetime(2019, 11, 27, 8, 26, 10, tzinfo=self.ET)
         calendar = BusinessDaysCalendarWithBankHolidays(
-            "2019-11-28",
-            cut_off_time="15:20",
-            cut_off_times={"2019-11-29": "13:30"},
+            "2019-11-28", eod_time="15:20", eod_times={"2019-11-29": "13:30"}
         )
         w = CronSim("* eb * * *", now, business_days_calendar=calendar)
 
@@ -639,7 +637,7 @@ class TestBusinessDays(unittest.TestCase):
 
     def test_business_day_multiple_evening_hours(self) -> None:
         now = datetime(2019, 4, 4, 13, 26, 10, tzinfo=self.ET)
-        calendar = BusinessDaysCalendarWithBankHolidays(cut_off_time="20:30")
+        calendar = BusinessDaysCalendarWithBankHolidays(eod_time="20:30")
         w = CronSim("30 8-20/2 * * b", now, business_days_calendar=calendar)
 
         self.assertNextEqual(w, "2019-04-04T14:30:00-04:00")
@@ -665,7 +663,7 @@ class TestBusinessDayCombinations(unittest.TestCase):
     def test_close_of_last_business_day_of_the_week(self) -> None:
         now = datetime(2019, 4, 4, 13, 26, 10, tzinfo=self.ET)
         calendar = BusinessDaysCalendarWithBankHolidays(
-            "2019-04-19", cut_off_time="15:30"
+            "2019-04-19", eod_time="15:30"
         )
         w = CronSim("eb eb * * lb", now, business_days_calendar=calendar)
 
@@ -679,7 +677,7 @@ class TestBusinessDayCombinations(unittest.TestCase):
     def test_end_of_first_business_day_of_the_month(self) -> None:
         now = datetime(2018, 6, 4, 13, 26, 10, tzinfo=self.ET)
         calendar = BusinessDaysCalendarWithBankHolidays(
-            "2018-09-03", cut_off_time="15:30"
+            "2018-09-03", eod_time="15:30"
         )
         w = CronSim("eb eb fb * *", now, business_days_calendar=calendar)
 
@@ -690,9 +688,9 @@ class TestBusinessDayCombinations(unittest.TestCase):
         self.assertNextEqual(w, "2018-11-01T15:30:00-04:00")
         self.assertNextEqual(w, "2018-12-03T15:30:00-05:00")
 
-    def test_end_of_month_and_and_of_business_week(self) -> None:
+    def test_end_of_month_and_end_of_business_week(self) -> None:
         now = datetime(2019, 10, 12, 13, 26, 10, tzinfo=self.ET)
-        calendar = BusinessDaysCalendarWithBankHolidays(cut_off_time="12:30")
+        calendar = BusinessDaysCalendarWithBankHolidays(eod_time="12:30")
         w = CronSim("30 12 lb * lb", now, business_days_calendar=calendar)
 
         self.assertNextEqual(w, "2019-10-18T12:30:00-04:00")
@@ -707,7 +705,7 @@ class TestBusinessDayCombinations(unittest.TestCase):
 
     def test_end_of_business_day_daylight_savings(self) -> None:
         now = datetime(2019, 10, 31, 13, 26, 10, tzinfo=self.ET)
-        calendar = BusinessDaysCalendarWithBankHolidays(cut_off_time="15:30")
+        calendar = BusinessDaysCalendarWithBankHolidays(eod_time="15:30")
         w1 = CronSim("eb eb * * *", now, business_days_calendar=calendar)
         w2 = CronSim("30 15 * * mon-fri", now, business_days_calendar=calendar)
 
