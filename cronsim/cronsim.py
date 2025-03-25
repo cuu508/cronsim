@@ -78,6 +78,8 @@ class Field(IntEnum):
                 return {CronSim.LAST_WEEK_BUSINESSDAY}
             elif s == "FB":
                 return {CronSim.FIRST_WEEK_BUSINESSDAY}
+            elif s == "B":
+                return {CronSim.BUSINESSDAY}
             elif "L" in s:
                 value = s[:-1]
                 if not value.isdigit():
@@ -187,6 +189,7 @@ class CronSim:
     LAST_WEEK_BUSINESSDAY = -1004
     FIRST_WEEK_BUSINESSDAY = -1005
     END_OF_BUSINESSDAY = -1006
+    BUSINESSDAY = -1007
 
     def __init__(
             self,
@@ -246,7 +249,9 @@ class CronSim:
             if self.END_OF_BUSINESSDAY in self.hours:
                 raise CronSimError(Field.HOUR.msg())
 
-        self.match_business_day = self.END_OF_BUSINESSDAY in self.hours
+        self.match_business_day = (
+            self.END_OF_BUSINESSDAY in self.hours or self.BUSINESSDAY in self.weekdays
+        )
 
         self.business_days_calendar = business_days_calendar
 
@@ -460,6 +465,10 @@ class CronSim:
             if d.day + 7 > last:
                 # Same day next week would be outside this month.
                 # So this is the last one this month.
+                return True
+
+        if self.BUSINESSDAY in self.weekdays:
+            if self.business_days_calendar.is_business_day(d):
                 return True
 
         if self.FIRST_WEEK_BUSINESSDAY in self.weekdays:
