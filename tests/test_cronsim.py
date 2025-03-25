@@ -1050,34 +1050,59 @@ class TestReverse(unittest.TestCase):
         "1 1 */100,1-7 * MON",
         "1 1 * * */3",
     ]
+    business_days_samples = [
+        "0 9 fb * *",
+        "0 9 lb * *",
+        "0 9 * * fb",
+        "0 9 * * lb",
+        "* eb * * *",
+        "eb eb * * *",
+        "0 1 * * b",
+        "eb eb * * lb",
+        "30 12 lb * lb",
+    ]
     tz = ZoneInfo("Europe/Riga")
 
-    def _test(self, expr, now):
-        it = CronSim(expr, now)
+    def _test(self, expr, now, test_business_days=False):
+        business_days_calendar = BUSINESS_CALENDAR if test_business_days else None
+        it = CronSim(expr, now, business_days_calendar=business_days_calendar)
         crumbs = [next(it) for i in range(0, 5)]
 
-        reverse_it = CronSim(expr, crumbs.pop(), reverse=True)
+        reverse_it = CronSim(
+            expr,
+            crumbs.pop(),
+            reverse=True,
+            business_days_calendar=business_days_calendar,
+        )
         while crumbs:
             self.assertEqual(next(reverse_it), crumbs.pop())
 
     def test_it_handles_naive_datetime(self) -> None:
         for sample in self.samples:
             self._test(sample, NOW)
+        for sample in self.business_days_samples:
+            self._test(sample, NOW, test_business_days=True)
 
     def test_it_handles_utc(self) -> None:
         now = NOW.replace(tzinfo=timezone.utc)
         for sample in self.samples:
             self._test(sample, now)
+        for sample in self.business_days_samples:
+            self._test(sample, now, test_business_days=True)
 
     def test_it_handles_dst_mar(self) -> None:
         now = datetime(2021, 3, 28, 1, 30, tzinfo=self.tz)
         for sample in self.samples:
             self._test(sample, now)
+        for sample in self.business_days_samples:
+            self._test(sample, now, test_business_days=True)
 
     def test_it_handles_dst_oct(self) -> None:
         now = datetime(2021, 10, 31, 1, 30, tzinfo=self.tz)
         for sample in self.samples:
             self._test(sample, now)
+        for sample in self.business_days_samples:
+            self._test(sample, now, test_business_days=True)
 
     def test_it_handles_no_matches(self) -> None:
         # The first date of the month *and* the fourth Monday of the month
