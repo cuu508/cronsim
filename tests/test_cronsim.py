@@ -224,13 +224,13 @@ class TestParse(unittest.TestCase):
         w = CronSim("* * * * lb", NOW, business_days_calendar=BUSINESS_CALENDAR)
         self.assertEqual(w.weekdays, {CronSim.LAST_WEEK_BUSINESSDAY})
 
-    def test_it_parses_hour_eb(self) -> None:
-        w = CronSim("* EB * * *", NOW, business_days_calendar=BUSINESS_CALENDAR)
+    def test_it_parses_hour_and_minute_eb(self) -> None:
+        w = CronSim("EB EB * * *", NOW, business_days_calendar=BUSINESS_CALENDAR)
         self.assertEqual(w.hours, {CronSim.END_OF_BUSINESSDAY})
         self.assertEqual(w.minutes, {CronSim.END_OF_BUSINESSDAY})
 
-    def test_it_parses_hour_lowercase_eb(self) -> None:
-        w = CronSim("* eb * * *", NOW, business_days_calendar=BUSINESS_CALENDAR)
+    def test_it_parses_hour_and_minute_lowercase_eb(self) -> None:
+        w = CronSim("eb eb * * *", NOW, business_days_calendar=BUSINESS_CALENDAR)
         self.assertEqual(w.hours, {CronSim.END_OF_BUSINESSDAY})
         self.assertEqual(w.minutes, {CronSim.END_OF_BUSINESSDAY})
 
@@ -339,7 +339,15 @@ class TestValidation(unittest.TestCase):
 
     def test_it_rejects_end_of_business_day_without_business_calendar(self) -> None:
         with self.assertRaisesRegex(CronSimError, "Bad hour"):
-            CronSim("* eb * * *", NOW)
+            CronSim("eb eb * * *", NOW)
+
+    def test_it_rejects_end_of_business_day_only_in_hours(self) -> None:
+        with self.assertRaisesRegex(CronSimError, "Bad minute"):
+            CronSim("* eb * * *", NOW, business_days_calendar=BUSINESS_CALENDAR)
+
+    def test_it_rejects_end_of_business_day_only_in_minutes(self) -> None:
+        with self.assertRaisesRegex(CronSimError, "Bad hour"):
+            CronSim("eb * * * *", NOW, business_days_calendar=BUSINESS_CALENDAR)
 
     def test_it_rejects_end_of_business_day_hour_with_specific_minute(self) -> None:
         with self.assertRaisesRegex(CronSimError, "Bad minute"):
@@ -526,7 +534,7 @@ class TestEndOfBusinessDay(unittest.TestCase):
         calendar = BusinessDaysCalendarWithBankHolidays(
             "2019-04-19", eod_time="15:00"
         )
-        w = CronSim("* eb * * *", now, business_days_calendar=calendar)
+        w = CronSim("eb eb * * *", now, business_days_calendar=calendar)
 
         self.assertNextEqual(w, "2019-04-17T15:00:00-04:00")
         self.assertNextEqual(w, "2019-04-18T15:00:00-04:00")
@@ -580,7 +588,7 @@ class TestEndOfBusinessDay(unittest.TestCase):
         calendar = BusinessDaysCalendarWithBankHolidays(
             "2019-11-28", eod_time="15:20", eod_times={"2019-11-29": "13:30"}
         )
-        w = CronSim("* eb * * *", now, business_days_calendar=calendar)
+        w = CronSim("eb eb * * *", now, business_days_calendar=calendar)
 
         self.assertNextEqual(w, "2019-11-27T15:20:00-05:00")
         self.assertNextEqual(w, "2019-11-29T13:30:00-05:00")
@@ -1024,7 +1032,6 @@ class TestExplain(unittest.TestCase):
         ("* * * * b",  "Every minute on every business day of every week"),
         ("* * * * b",  "Every minute on every business day of every week"),
         ("eb eb * * *",  "At the end of day every day"),
-        ("* eb * * *",  "At the end of day every day"),
     ]
     def test_it_works(self) -> None:
         result = CronSim("* * * * *", NOW).explain()
@@ -1070,7 +1077,6 @@ class TestReverse(unittest.TestCase):
         "0 9 lb * *",
         "0 9 * * fb",
         "0 9 * * lb",
-        "* eb * * *",
         "eb eb * * *",
         "0 1 * * b",
         "eb eb * * lb",

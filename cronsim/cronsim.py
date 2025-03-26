@@ -210,13 +210,13 @@ class CronSim:
         # Otherwise it's "OR".
         self.day_and = self.parts[2].startswith("*") or self.parts[4].startswith("*")
 
+        self.minutes = cast(set[int], Field.MINUTE.parse(self.parts[0]))
         self.hours = cast(set[int], Field.HOUR.parse(self.parts[1]))
-        if self.END_OF_BUSINESSDAY in self.hours:
-            if self.parts[0] not in ["*", "EB"]:
+        if (self.END_OF_BUSINESSDAY in self.hours) != (self.END_OF_BUSINESSDAY in self.minutes):
+            if self.END_OF_BUSINESSDAY in self.hours:
                 raise CronSimError(Field.MINUTE.msg())
-            self.minutes = {self.END_OF_BUSINESSDAY}
-        else:
-            self.minutes = cast(set[int], Field.MINUTE.parse(self.parts[0]))
+            else:
+                raise CronSimError(Field.HOUR.msg())
         self.days = cast(set[int], Field.DAY.parse(self.parts[2]))
         self.months = cast(set[int], Field.MONTH.parse(self.parts[3]))
         self.weekdays = Field.DOW.parse(self.parts[4])

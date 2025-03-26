@@ -188,11 +188,9 @@ business day of the month".
 
 Example: `0 0 FB * *` (at the midnight of the first business day of every month).
 
-**"EB" in the hours/minutes field**: interpreted as "end of day time". If "EB"
-is used in hours field then minutes should be `EB` or `*` which are interpreted
-the same way.
+**"EB" in the hours and minutes field**: interpreted as "end of day time". 
 
-Example: `* EB * * 5` (at the end of day every Friday).
+Example: `EB EB * * 5` (at the end of day every Friday).
 
 ## Business days/hours
 
