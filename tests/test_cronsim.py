@@ -4,7 +4,7 @@ import sys
 import unittest
 from datetime import datetime, timezone, timedelta
 from itertools import product
-from typing import Iterator, Sequence
+from typing import Generator, Iterator, Sequence
 
 if sys.version_info >= (3, 9):
     from zoneinfo import ZoneInfo
@@ -51,9 +51,9 @@ class BusinessDaysCalendarWithBankHolidays(BusinessDaysCalendar):
             d += timedelta(days=1)
         return d
 
-    def get_end_of_day(self, dt: datetime) -> datetime:
-        if dt.date() in self.eod_times:
-            eod_time = self.eod_times[dt.date()]
+    def get_end_of_day(self, dt: date) -> datetime:
+        if dt in self.eod_times:
+            eod_time = self.eod_times[dt]
         else:
             eod_time = self.eod_time
         return datetime.combine(dt, eod_time)

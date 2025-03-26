@@ -7,3 +7,4 @@ venv
 .*.swp
 .exrc
 .mise.*
+build/

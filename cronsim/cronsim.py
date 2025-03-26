@@ -177,7 +177,7 @@ class BusinessDaysCalendar(ABC):
         pass
 
     @abstractmethod
-    def get_end_of_day(self, dt: datetime) -> datetime:
+    def get_end_of_day(self, d: date) -> datetime:
         pass
 
 
@@ -272,7 +272,7 @@ class CronSim:
     def match_minute(self, dt: datetime) -> bool:
         """Return True is minute matches."""
         if self.END_OF_BUSINESSDAY in self.minutes:
-            if dt.minute == self.business_days_calendar.get_end_of_day(dt).minute:
+            if dt.minute == self.get_end_of_day(dt.date()).minute:
                 return True
         else:
             if dt.minute in self.minutes:
@@ -335,7 +335,7 @@ class CronSim:
             return True
 
         if self.END_OF_BUSINESSDAY in self.hours:
-            if dt.hour == self.business_days_calendar.get_end_of_day(dt).hour:
+            if dt.hour == self.get_end_of_day(dt.date()).hour:
                 return True
 
         return False
@@ -374,6 +374,10 @@ class CronSim:
                 break
 
         return True
+
+    @lru_cache(maxsize=128)
+    def get_end_of_day(self, d: date) -> datetime:
+        return self.business_days_calendar.get_end_of_day(d)
 
     def get_first_business_day_of_week(self, d: date) -> date | None:
         """
