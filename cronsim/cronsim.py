@@ -5,13 +5,14 @@ from datetime import date, datetime, time
 from datetime import timedelta as td
 from datetime import timezone
 from enum import IntEnum
-from typing import cast, Union
+from typing import Union, cast
 
 UTC = timezone.utc
 
 SpecItem = Union[int, tuple[int, int]]
 
 RANGES = [
+    range(0, 60),
     range(0, 60),
     range(0, 24),
     range(1, 32),
@@ -21,7 +22,7 @@ RANGES = [
 SYMBOLIC_DAYS = "SUN MON TUE WED THU FRI SAT".split()
 SYMBOLIC_MONTHS = "JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC".split()
 DAYS_IN_MONTH = [-1, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-FIELD_NAMES = ["minute", "hour", "day-of-month", "month", "day-of-week"]
+FIELD_NAMES = ["second", "minute", "hour", "day-of-month", "month", "day-of-week"]
 
 
 class CronSimError(Exception):
@@ -29,11 +30,12 @@ class CronSimError(Exception):
 
 
 class Field(IntEnum):
-    MINUTE = 0
-    HOUR = 1
-    DAY = 2
-    MONTH = 3
-    DOW = 4
+    SECOND = 0
+    MINUTE = 1
+    HOUR = 2
+    DAY = 3
+    MONTH = 4
+    DOW = 5
 
     def msg(self) -> str:
         return f"Bad {FIELD_NAMES[self]}"
@@ -149,23 +151,29 @@ class CronSim:
     LAST_WEEKDAY = -1001
 
     def __init__(self, expr: str, dt: datetime, reverse: bool = False):
-        self.dt = dt.replace(second=0, microsecond=0)
+        self.dt = dt.replace(microsecond=0)
         self.tick_direction = -1 if reverse else 1
 
         self.parts = expr.upper().split()
-        if len(self.parts) != 5:
+        # If the expression doesn't have the seconds field, add it here
+        # so that we always have a 6-field expression
+        if len(self.parts) == 5:
+            self.parts.insert(0, "0")
+
+        if len(self.parts) != 6:
             raise CronSimError("Wrong number of fields")
 
         # In Debian cron, if either the day-of-month or the day-of-week field
         # starts with a star, then there is an "AND" relationship between them.
         # Otherwise it's "OR".
-        self.day_and = self.parts[2].startswith("*") or self.parts[4].startswith("*")
+        self.day_and = self.parts[3].startswith("*") or self.parts[5].startswith("*")
 
-        self.minutes = cast(set[int], Field.MINUTE.parse(self.parts[0]))
-        self.hours = cast(set[int], Field.HOUR.parse(self.parts[1]))
-        self.days = cast(set[int], Field.DAY.parse(self.parts[2]))
-        self.months = cast(set[int], Field.MONTH.parse(self.parts[3]))
-        self.weekdays = Field.DOW.parse(self.parts[4])
+        self.seconds = cast(set[int], Field.SECOND.parse(self.parts[0]))
+        self.minutes = cast(set[int], Field.MINUTE.parse(self.parts[1]))
+        self.hours = cast(set[int], Field.HOUR.parse(self.parts[2]))
+        self.days = cast(set[int], Field.DAY.parse(self.parts[3]))
+        self.months = cast(set[int], Field.MONTH.parse(self.parts[4]))
+        self.weekdays = Field.DOW.parse(self.parts[5])
 
         if len(self.days) and min(self.days) > 29:
             # Check if we have any month with enough days
@@ -177,25 +185,74 @@ class CronSim:
             # No special DST handling for UTC
             pass
         else:
-            if not self.parts[0].startswith("*") and not self.parts[1].startswith("*"):
+            if not self.parts[1].startswith("*") and not self.parts[2].startswith("*"):
                 # Will use special handling for jobs that run at specific time, or
                 # with a granularity greater than one hour (to mimic Debian cron).
                 self.fixup_tz = self.dt.tzinfo
                 self.dt = self.dt.replace(tzinfo=None)
 
-    def tick(self, minutes: int = 1) -> None:
-        """Roll self.dt in `tick_direction` by 1 or more minutes and fix timezone."""
+    def tick(self, seconds: int = 1) -> None:
+        """Roll self.dt in `tick_direction` by 1 or more seconds and fix timezone."""
 
         # Tick should only receive positive values.
         # Receiving a negative value or zero means a coding error.
-        assert minutes > 0
+        assert seconds > 0
 
         if self.dt.tzinfo not in (None, UTC):
             as_utc = self.dt.astimezone(UTC)
-            as_utc += td(minutes=minutes * self.tick_direction)
+            as_utc += td(seconds=seconds * self.tick_direction)
             self.dt = as_utc.astimezone(self.dt.tzinfo)
         else:
-            self.dt += td(minutes=minutes * self.tick_direction)
+            self.dt += td(seconds=seconds * self.tick_direction)
+
+    def advance_second(self) -> bool:
+        """Roll forward the second component until it satisfies the constraints.
+
+        Return False if the second meets contraints without modification.
+        Return True if self.dt was rolled forward.
+
+        """
+
+        if self.dt.second in self.seconds:
+            return False
+
+        if len(self.seconds) == 1:
+            # An optimization for the special case where self.seconds has exactly
+            # one element. Instead of advancing one second per iteration,
+            # make a jump from the current second to the target second.
+            (target_second,) = self.seconds
+            delta = (target_second - self.dt.second) % 60
+            self.tick(seconds=delta)
+
+        while self.dt.second not in self.seconds:
+            self.tick()
+            if self.dt.second == 0:
+                # Break out to re-check month, day, hour, and minute
+                break
+
+        return True
+
+    def reverse_second(self) -> bool:
+        """Roll backward the second component until it satisfies the constraints."""
+
+        if self.dt.second in self.seconds:
+            return False
+
+        if len(self.seconds) == 1:
+            # An optimization for the special case where self.seconds has exactly
+            # one element. Instead of advancing one second per iteration,
+            # make a jump from the current second to the target second.
+            (target_second,) = self.seconds
+            delta = (self.dt.second - target_second) % 60
+            self.tick(seconds=delta)
+
+        while self.dt.second not in self.seconds:
+            self.tick()
+            if self.dt.second == 59:
+                # Break out to re-check month, day, hour, and minute
+                break
+
+        return True
 
     def advance_minute(self) -> bool:
         """Roll forward the minute component until it satisfies the constraints.
@@ -208,18 +265,20 @@ class CronSim:
         if self.dt.minute in self.minutes:
             return False
 
+        self.dt = self.dt.replace(second=0)
+
         if len(self.minutes) == 1:
             # An optimization for the special case where self.minutes has exactly
             # one element. Instead of advancing one minute per iteration,
             # make a jump from the current minute to the target minute.
             (target_minute,) = self.minutes
             delta = (target_minute - self.dt.minute) % 60
-            self.tick(minutes=delta)
+            self.tick(seconds=delta * 60)
 
         while self.dt.minute not in self.minutes:
-            self.tick()
+            self.tick(seconds=60)
             if self.dt.minute == 0:
-                # Break out to re-check month, day and hour
+                # Break out to re-check month, day, and hour
                 break
 
         return True
@@ -230,18 +289,20 @@ class CronSim:
         if self.dt.minute in self.minutes:
             return False
 
+        self.dt = self.dt.replace(second=59)
+
         if len(self.minutes) == 1:
             # An optimization for the special case where self.minutes has exactly
             # one element. Instead of advancing one minute per iteration,
             # make a jump from the current minute to the target minute.
             (target_minute,) = self.minutes
             delta = (self.dt.minute - target_minute) % 60
-            self.tick(minutes=delta)
+            self.tick(seconds=delta * 60)
 
         while self.dt.minute not in self.minutes:
-            self.tick()
+            self.tick(seconds=60)
             if self.dt.minute == 59:
-                # Break out to re-check month, day and hour
+                # Break out to re-check month, day, and hour
                 break
 
         return True
@@ -257,9 +318,9 @@ class CronSim:
         if self.dt.hour in self.hours:
             return False
 
-        self.dt = self.dt.replace(minute=0)
+        self.dt = self.dt.replace(minute=0, second=0)
         while self.dt.hour not in self.hours:
-            self.tick(minutes=60)
+            self.tick(seconds=3600)
             if self.dt.hour == 0:
                 # break out to re-check month and day
                 break
@@ -272,9 +333,9 @@ class CronSim:
         if self.dt.hour in self.hours:
             return False
 
-        self.dt = self.dt.replace(minute=59)
+        self.dt = self.dt.replace(minute=59, second=59)
         while self.dt.hour not in self.hours:
-            self.tick(minutes=60)
+            self.tick(seconds=3600)
             if self.dt.hour == 23:
                 # break out to re-check month and day
                 break
@@ -367,7 +428,7 @@ class CronSim:
                 # This significantly speeds up the "0 0 * 2 MON#5" case
                 break
 
-        self.dt = datetime.combine(needle, time(23, 59), tzinfo=self.dt.tzinfo)
+        self.dt = datetime.combine(needle, time(23, 59, 59), tzinfo=self.dt.tzinfo)
         return True
 
     def advance_month(self) -> None:
@@ -394,7 +455,7 @@ class CronSim:
             needle = needle.replace(day=1)
             needle -= td(days=1)
 
-        self.dt = datetime.combine(needle, time(23, 59), tzinfo=self.dt.tzinfo)
+        self.dt = datetime.combine(needle, time(23, 59, 59), tzinfo=self.dt.tzinfo)
 
     def __iter__(self) -> CronSim:
         return self
@@ -417,6 +478,9 @@ class CronSim:
                 continue
 
             if self.advance_minute():
+                continue
+
+            if self.advance_second():
                 continue
 
             break
@@ -447,6 +511,9 @@ class CronSim:
             if self.reverse_minute():
                 continue
 
+            if self.reverse_second():
+                continue
+
             break
 
     def __next__(self) -> datetime:
@@ -472,4 +539,5 @@ class CronSim:
     def explain(self) -> str:
         from cronsim.explain import Expression
 
-        return Expression(self.parts).explain()
+        parts_sans_seconds = self.parts[1:]
+        return Expression(parts_sans_seconds).explain()

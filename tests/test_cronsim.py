@@ -2,14 +2,10 @@ from __future__ import annotations
 
 import sys
 import unittest
+from collections.abc import Iterator
 from datetime import datetime, timezone
 from itertools import product
-from typing import Iterator
-
-if sys.version_info >= (3, 9):
-    from zoneinfo import ZoneInfo
-else:
-    from backports.zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo
 
 from cronsim import CronSim, CronSimError
 
@@ -24,6 +20,10 @@ class TestParse(unittest.TestCase):
         self.assertEqual(w.days, set(range(1, 32)))
         self.assertEqual(w.months, set(range(1, 13)))
         self.assertEqual(w.weekdays, set(range(0, 8)))
+
+    def test_it_parses_6th_field(self) -> None:
+        w = CronSim("* * * * * *", NOW)
+        self.assertEqual(w.seconds, set(range(0, 60)))
 
     def test_it_parses_numbers(self) -> None:
         w = CronSim("1 * * * *", NOW)
@@ -151,6 +151,7 @@ class TestValidation(unittest.TestCase):
             "* * * %s * ",
             "* * * * %s",
             "* * * * * %s",
+            "* * * * * * %s",
             "1-%s * * * *",
             "%s-60 * * * *",
             "* * 1-%s * *",
@@ -160,6 +161,8 @@ class TestValidation(unittest.TestCase):
             "* * * JAN-%s *",
             "* * * * %s-SUN",
             "* * * * MON-%s",
+            "1-%s * * * * *",
+            "%s-60 * * * * *",
         )
 
         bad_values = (
@@ -288,6 +291,14 @@ class TestIterator(unittest.TestCase):
         self.assertEqual(next(it).isoformat(), "2020-01-04T01:01:00")
         self.assertEqual(next(it).isoformat(), "2020-01-05T01:01:00")
         self.assertEqual(next(it).isoformat(), "2020-01-08T01:01:00")
+
+    def test_it_handles_seconds(self) -> None:
+        it = CronSim("*/15 * * * * *", NOW)
+        self.assertEqual(next(it).isoformat(), "2020-01-01T00:00:15")
+        self.assertEqual(next(it).isoformat(), "2020-01-01T00:00:30")
+        self.assertEqual(next(it).isoformat(), "2020-01-01T00:00:45")
+        self.assertEqual(next(it).isoformat(), "2020-01-01T00:01:00")
+        self.assertEqual(next(it).isoformat(), "2020-01-01T00:01:15")
 
 
 class TestDstTransitions(unittest.TestCase):
@@ -588,6 +599,10 @@ class TestReverse(unittest.TestCase):
         "1 1 1-7 * */7",
         "1 1 */100,1-7 * MON",
         "1 1 * * */3",
+        "* 30 */2 * * *",
+        "*/30 30 */2 * * *",
+        "0-1 30 */2 * * *",
+        "0,59 30 */2 * * *",
     ]
     tz = ZoneInfo("Europe/Riga")
 

@@ -12,8 +12,7 @@ Development priorities:
 * Correctness. CronSim tries to match Debian's cron as closely as possible,
   including its quirky behaviour during DST transitions.
 * Readability. Prefer simple over clever.
-* Minimalism. Don't implement features that Healthchecks will not use
-  (for example, the seconds field in cron expressions).
+* Minimalism. Don't implement features that Healthchecks will not use.
 
 ## Installation
 
@@ -138,7 +137,7 @@ for examples of this special handling.
 
 | Feature                              | Debian | Quartz | croniter | cronsim |
 | ------------------------------------ | :----: | :----: | :------: | :-----: |
-| Seconds in the 6th field             | No     | Yes    | Yes      | No      |
+| Seconds in the 6th field             | No     | Yes    | Yes      | Yes     |
 | "L" as the day-of-month              | No     | Yes    | Yes      | Yes     |
 | "LW" as the day-of-month             | No     | Yes    | No       | Yes     |
 | "L" in the day-of-week field         | No     | Yes    | No       | Yes     |
@@ -147,9 +146,10 @@ for examples of this special handling.
 
 **Seconds in the 6th field**: an optional sixth field specifying seconds.
 Supports the same syntax features as the minutes field. Quartz Scheduler
-expects seconds in the first field, croniter expects seconds in the last field.
+and cronsim expects seconds in the first field, croniter can be configured 
+to use the first or the last field as seconds.
 
-Quartz example: `*/15 * * * * *` (every 15 seconds).
+cronsim example: `*/15 * * * * *` (every 15 seconds).
 
 **"L" as the day-of-month**: support for the "L" special character in the
 day-of-month field. Interpreted as "the last day of the month".
@@ -191,7 +191,10 @@ Outputs:
 Every fifth minute from 09:00 through 17:59
 ```
 
-The text descriptions are available in English only. The text descriptions
-use the 24-hour time format ("23:00" instead of "11:00 PM").
+Notes:
+
+* The text descriptions are available in English only.
+* The text descriptions use the 24-hour time format ("23:00" instead of "11:00 PM").
+* Six-field expressions (with seconds in the 6th field) are not supported.
 
 For examples of generated descriptions see `tests/test_explain.py`.

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 
 ## 2.7-dev - Unreleased
 - Remove python 3.8 support (EOL)
+- Add support for six-field expressions (#6)
 
 ## 2.6 - 2024-10-02
 - Add support for iteration backwards in time (#2)
