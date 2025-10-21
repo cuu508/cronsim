@@ -24,7 +24,7 @@ class TestSecondField(TestBase):
     """
     * * * * * *      | Every second
     0,0 * * * * *    | Every minute
-    */5 * * * * *    | Every fifth second
+    */5 * * * * *    | Every fifth second of every minute
     """
 
 

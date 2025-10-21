@@ -603,7 +603,7 @@ class Expression:
                 return "every minute", False
             if self.minute.star:
                 # Hours and minutes are both *, so only describe seconds
-                return str(self.second), False
+                return f"{self.second} of every minute", False
             if self.minute.single_value == 0 and self.second.zero:
                 return "at the start of every hour", False
             if self.second.zero:
