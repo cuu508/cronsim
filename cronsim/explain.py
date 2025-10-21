@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from dataclasses import dataclass
-from typing import Union
 
 
 @dataclass(frozen=True)
@@ -66,7 +65,7 @@ def ordinal(x: int) -> str:
     return ORDINALS.get(x, f"{x}th")
 
 
-def format_time(h: int, m: int, s: Union[int, None] = None) -> str:
+def format_time(h: int, m: int, s: int | None = None) -> str:
     """Format time as HH:MM or HH:MM:SS (if seconds are specified).
 
     >>> format_time(0, 0)

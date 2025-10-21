@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 import unittest
 from collections.abc import Iterator
 from datetime import datetime, timezone
