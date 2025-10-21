@@ -203,6 +203,7 @@ class TestSpecificTimes(TestBase):
     33 22 11 * * *        | At 11:22:33 every day
     0,30 13,14 * * *      | At 13:00, 13:30, 14:00, and 14:30 every day
     0,15,30,45 2 * * *    | At 02:00, 02:15, 02:30, and 02:45 every day
+    0,30 0 12 * * *       | At 12:00:00 and 12:00:30 every day
     15,45 0 12 * * *      | At 12:00:15 and 12:00:45 every day
     0,15,30,45 2,3 * * *  | At minutes 0, 15, 30, and 45 past hours 2 and 3
     0-10 11 * * *         | Every minute from 11:00 through 11:10

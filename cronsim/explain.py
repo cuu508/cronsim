@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from dataclasses import dataclass
+from typing import Union
 
 
 @dataclass(frozen=True)
@@ -65,8 +66,8 @@ def ordinal(x: int) -> str:
     return ORDINALS.get(x, f"{x}th")
 
 
-def format_time(h: int, m: int, s: int) -> str:
-    """Format time as HH:MM or HH:MM:SS (if seconds are not zero).
+def format_time(h: int, m: int, s: Union[int, None] = None) -> str:
+    """Format time as HH:MM or HH:MM:SS (if seconds are specified).
 
     >>> format_time(0, 0)
     '00:00'
@@ -75,10 +76,10 @@ def format_time(h: int, m: int, s: int) -> str:
     >>> format_time(11, 22, 33)
     '11:22:33'
     """
-    if s:
-        return f"{h:02d}:{m:02d}:{s:02d}"
+    if s is None:
+        return f"{h:02d}:{m:02d}"
 
-    return f"{h:02d}:{m:02d}"
+    return f"{h:02d}:{m:02d}:{s:02d}"
 
 
 class Field:
@@ -531,7 +532,10 @@ class Expression:
                 for h in sorted(hour_terms):
                     for m in sorted(minute_terms):
                         for s in sorted(second_terms):
-                            times.append(format_time(h, m, s))
+                            # If the seconds field is a single "0" then do not
+                            # pass it to format_time
+                            ss = None if self.second.zero else s
+                            times.append(format_time(h, m, ss))
 
                 return "at " + join(times), True
 
@@ -539,8 +543,8 @@ class Expression:
         if self.hour.single_value and len(self.minute.parsed) == 1 and self.second.zero:
             seq = self.minute.parsed[0]
             if seq.start is not None and seq.stop is not None and seq.step == 1:
-                hhmm1 = format_time(self.hour.single_value, seq.start, 0)
-                hhmm2 = format_time(self.hour.single_value, seq.stop, 0)
+                hhmm1 = format_time(self.hour.single_value, seq.start)
+                hhmm2 = format_time(self.hour.single_value, seq.stop)
                 return f"every minute from {hhmm1} through {hhmm2}", False
 
         # every minute from 9:00 through 17:59
@@ -553,8 +557,8 @@ class Expression:
             if mseq.start is None:
                 hseq = self.hour.parsed[0]
                 if hseq.start is not None and hseq.stop is not None and hseq.step == 1:
-                    hhmm1 = format_time(hseq.start, 0, 0)
-                    hhmm2 = format_time(hseq.stop, 59, 0)
+                    hhmm1 = format_time(hseq.start, 0)
+                    hhmm2 = format_time(hseq.stop, 59)
                     return f"{self.minute} from {hhmm1} through {hhmm2}", False
 
         return None
