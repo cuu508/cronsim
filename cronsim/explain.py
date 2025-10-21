@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Generator
 from dataclasses import dataclass
-from typing import Generator
 
 
 @dataclass(frozen=True)
@@ -65,14 +65,19 @@ def ordinal(x: int) -> str:
     return ORDINALS.get(x, f"{x}th")
 
 
-def format_time(h: int, m: int) -> str:
-    """Format hours and minutes as HH:MM.
+def format_time(h: int, m: int, s: int) -> str:
+    """Format time as HH:MM or HH:MM:SS (if seconds are not zero).
 
     >>> format_time(0, 0)
     '00:00'
     >>> format_time(1, 23)
     '01:23'
+    >>> format_time(11, 22, 33)
+    '11:22:33'
     """
+    if s:
+        return f"{h:02d}:{m:02d}:{s:02d}"
+
     return f"{h:02d}:{m:02d}"
 
 
@@ -98,6 +103,8 @@ class Field:
                 self.single_value = None
                 break
 
+        # Does the field have a single value "0"?
+        self.zero = self.single_value == 0
         # Does the field cover the full range?
         self.star = all(seq.is_star() for seq in self.parsed)
         # Are there any single values?
@@ -244,6 +251,39 @@ class Field:
         Subclasses can override this method to add prepositions ("at", "on", "in").
         """
         return self.format()
+
+
+class Second(Field):
+    name = "second"
+    min_value = 0
+    max_value = 59
+
+    def format(self) -> str:
+        """Format the minute field.
+
+        This method adds special handling when all values are single values. Instead
+        of "second 1, second 3, and second 5", it produces "seconds 1, 3, and 5".
+        """
+        if self.all_singles and len(self.parsed) > 1:
+            labels = [self.label(v) for v in self.singles()]
+            return f"seconds {join(labels)}"
+        return super().format()
+
+    def __str__(self) -> str:
+        """Return a human-friendly representation of the second field.
+
+        This method adds the 'at' preposition to the formatted string if the field has
+        any single values.
+
+        For example, if the field has a single range (1-5), the result will be
+        "every second from 1 through 5". But if the field also has a single field
+        (1-5,10), the result will be "at every second from 1 through 5 and second 10".
+        """
+        result = super().__str__()
+        if self.any_singles:
+            return "at " + result
+
+        return result
 
 
 class Minute(Field):
@@ -451,12 +491,16 @@ class Weekday(Field):
 
 class Expression:
     def __init__(self, parts: list[str]):
-        self.minute = Minute(parts[0])
-        self.hour = Hour(parts[1])
-        self.day = Day(parts[2])
-        self.month = Month(parts[3])
-        self.dow = Weekday(parts[4])
-        self.day_and = parts[2].startswith("*") or parts[4].startswith("*")
+        if len(parts) == 5:
+            parts.insert(0, "0")
+
+        self.second = Second(parts[0])
+        self.minute = Minute(parts[1])
+        self.hour = Hour(parts[2])
+        self.day = Day(parts[3])
+        self.month = Month(parts[4])
+        self.dow = Weekday(parts[5])
+        self.day_and = parts[3].startswith("*") or parts[5].startswith("*")
 
     def optimized_times(self) -> tuple[str, bool] | None:
         """Apply formatting optimizations for hours and minutes.
@@ -473,33 +517,44 @@ class Expression:
         If no special optimizations apply, return None.
         """
         # at 11:00, 11:30, ...
-        if self.hour.all_singles and self.minute.all_singles:
-            minute_terms, hour_terms = self.minute.singles(), self.hour.singles()
+        if (
+            self.hour.all_singles
+            and self.minute.all_singles
+            and self.second.all_singles
+        ):
+            second_terms = self.second.singles()
+            minute_terms = self.minute.singles()
+            hour_terms = self.hour.singles()
 
-            if len(minute_terms) * len(hour_terms) <= 4:
+            if len(second_terms) * len(minute_terms) * len(hour_terms) <= 4:
                 times = []
                 for h in sorted(hour_terms):
                     for m in sorted(minute_terms):
-                        times.append(format_time(h, m))
+                        for s in sorted(second_terms):
+                            times.append(format_time(h, m, s))
 
                 return "at " + join(times), True
 
         # every minute from 11:00 through 11:10
-        if self.hour.single_value and len(self.minute.parsed) == 1:
+        if self.hour.single_value and len(self.minute.parsed) == 1 and self.second.zero:
             seq = self.minute.parsed[0]
             if seq.start is not None and seq.stop is not None and seq.step == 1:
-                hhmm1 = format_time(self.hour.single_value, seq.start)
-                hhmm2 = format_time(self.hour.single_value, seq.stop)
+                hhmm1 = format_time(self.hour.single_value, seq.start, 0)
+                hhmm2 = format_time(self.hour.single_value, seq.stop, 0)
                 return f"every minute from {hhmm1} through {hhmm2}", False
 
         # every minute from 9:00 through 17:59
-        if len(self.hour.parsed) == 1 and len(self.minute.parsed) == 1:
+        if (
+            len(self.hour.parsed) == 1
+            and len(self.minute.parsed) == 1
+            and self.second.zero
+        ):
             mseq = self.minute.parsed[0]
             if mseq.start is None:
                 hseq = self.hour.parsed[0]
                 if hseq.start is not None and hseq.stop is not None and hseq.step == 1:
-                    hhmm1 = format_time(hseq.start, 0)
-                    hhmm2 = format_time(hseq.stop, 59)
+                    hhmm1 = format_time(hseq.start, 0, 0)
+                    hhmm2 = format_time(hseq.stop, 59, 0)
                     return f"{self.minute} from {hhmm1} through {hhmm2}", False
 
         return None
@@ -539,16 +594,25 @@ class Expression:
     def translate_time(self) -> tuple[str, bool]:
         """Convert the minute and hour fields to text."""
         if self.hour.star:
-            if self.minute.star:
+            if self.minute.star and self.second.star:
+                return "every second", False
+            if self.minute.star and self.second.zero:
                 return "every minute", False
-            if self.minute.single_value == 0:
+            if self.minute.star:
+                # Hours and minutes are both *, so only describe seconds
+                return str(self.second), False
+            if self.minute.single_value == 0 and self.second.zero:
                 return "at the start of every hour", False
-            return f"{self.minute} of every hour", False
+            if self.second.zero:
+                return f"{self.minute} of every hour", False
 
         if times := self.optimized_times():
             return times
 
-        return f"{self.minute} {self.hour}", False
+        if self.second.zero:
+            return f"{self.minute} {self.hour}", False
+
+        return f"{self.second} {self.minute} {self.hour}", False
 
     def translate_date(self, allow_every_day: bool) -> str:
         """Convert the day, month, and weekday fields to text."""

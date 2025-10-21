@@ -195,6 +195,5 @@ Notes:
 
 * The text descriptions are available in English only.
 * The text descriptions use the 24-hour time format ("23:00" instead of "11:00 PM").
-* Six-field expressions (with seconds in the 6th field) are not supported.
 
 For examples of generated descriptions see `tests/test_explain.py`.

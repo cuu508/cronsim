@@ -546,5 +546,4 @@ class CronSim:
     def explain(self) -> str:
         from cronsim.explain import Expression
 
-        parts_sans_seconds = self.parts[1:]
-        return Expression(parts_sans_seconds).explain()
+        return Expression(self.parts).explain()

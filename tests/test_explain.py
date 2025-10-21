@@ -20,6 +20,14 @@ class TestBase(unittest.TestCase):
                 self.assertEqual(explain(expr), desc, expr)
 
 
+class TestSecondField(TestBase):
+    """
+    * * * * * *      | Every second
+    0,0 * * * * *    | Every minute
+    */5 * * * * *    | Every fifth second
+    """
+
+
 class TestEveryMinute(TestBase):
     """
     * * * * *        | Every minute
@@ -192,8 +200,10 @@ class TestSpecificTimes(TestBase):
     """
     0 0 * * *             | At 00:00 every day
     0 2 * * *             | At 02:00 every day
+    33 22 11 * * *        | At 11:22:33 every day
     0,30 13,14 * * *      | At 13:00, 13:30, 14:00, and 14:30 every day
     0,15,30,45 2 * * *    | At 02:00, 02:15, 02:30, and 02:45 every day
+    15,45 0 12 * * *      | At 12:00:15 and 12:00:45 every day
     0,15,30,45 2,3 * * *  | At minutes 0, 15, 30, and 45 past hours 2 and 3
     0-10 11 * * *         | Every minute from 11:00 through 11:10
     * 9-17 * * *          | Every minute from 09:00 through 17:59
@@ -222,8 +232,8 @@ class TestSmoke(TestBase):
     30-59/5 2,4,6 1-10 1-3 * | Every fifth minute from 30 through 59 past hours 2, 4, and 6 on every day of month from 1 through 10 in every month from January through March
     0/15 9-17 1,10 * *       | Every 15th minute from 09:00 through 17:59 on the first and the 10th day of month
     * * * * 1,2,3            | Every minute on Monday, Tuesday, and Wednesday
-    0 0 1 1/2 * *            | At 00:00 on the first day of every second month
-    0 0 1 1/2,12 * *         | At 00:00 on the first day of every second month and December
+    0 0 1 1/2 *              | At 00:00 on the first day of every second month
+    0 0 1 1/2,12 *           | At 00:00 on the first day of every second month and December
     """
 
 
