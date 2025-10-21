@@ -228,53 +228,56 @@ class TestValidation(unittest.TestCase):
 
 
 class TestIterator(unittest.TestCase):
+    def assertNextEqual(self, iterator: Iterator[datetime], expected_iso: str) -> None:
+        self.assertEqual(next(iterator).isoformat(), expected_iso)
+
     def test_it_handles_l(self) -> None:
-        dt = next(CronSim("1 1 L * *", NOW))
-        self.assertEqual(dt.isoformat(), "2020-01-31T01:01:00")
+        it = CronSim("1 1 L * *", NOW)
+        self.assertNextEqual(it, "2020-01-31T01:01:00")
 
     def test_it_handles_lw(self) -> None:
-        dt = next(CronSim("1 1 LW 5 *", NOW))
-        self.assertEqual(dt.isoformat(), "2020-05-29T01:01:00")
+        it = CronSim("1 1 LW 5 *", NOW)
+        self.assertNextEqual(it, "2020-05-29T01:01:00")
 
     def test_it_handles_last_friday(self) -> None:
         it = CronSim("1 1 * * 5L", NOW)
-        self.assertEqual(next(it).isoformat(), "2020-01-31T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-02-28T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-03-27T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-04-24T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-05-29T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-06-26T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-07-31T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-08-28T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-09-25T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-10-30T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-11-27T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-12-25T01:01:00")
+        self.assertNextEqual(it, "2020-01-31T01:01:00")
+        self.assertNextEqual(it, "2020-02-28T01:01:00")
+        self.assertNextEqual(it, "2020-03-27T01:01:00")
+        self.assertNextEqual(it, "2020-04-24T01:01:00")
+        self.assertNextEqual(it, "2020-05-29T01:01:00")
+        self.assertNextEqual(it, "2020-06-26T01:01:00")
+        self.assertNextEqual(it, "2020-07-31T01:01:00")
+        self.assertNextEqual(it, "2020-08-28T01:01:00")
+        self.assertNextEqual(it, "2020-09-25T01:01:00")
+        self.assertNextEqual(it, "2020-10-30T01:01:00")
+        self.assertNextEqual(it, "2020-11-27T01:01:00")
+        self.assertNextEqual(it, "2020-12-25T01:01:00")
 
     def test_it_handles_last_sunday_two_notations(self) -> None:
         for pattern in ("1 1 * * 0L", "1 1 * * 7L"):
-            dt = next(CronSim(pattern, NOW))
-            self.assertEqual(dt.isoformat(), "2020-01-26T01:01:00")
+            it = CronSim(pattern, NOW)
+            self.assertNextEqual(it, "2020-01-26T01:01:00")
 
     def test_it_handles_nth_weekday(self) -> None:
-        dt = next(CronSim("1 1 * * 1#2", NOW))
-        self.assertEqual(dt.isoformat(), "2020-01-13T01:01:00")
+        it = CronSim("1 1 * * 1#2", NOW)
+        self.assertNextEqual(it, "2020-01-13T01:01:00")
 
     def test_it_handles_dow_star(self) -> None:
         # "First Sunday of the month"
         it = CronSim("1 1 1-7 * */7", NOW)
-        self.assertEqual(next(it).isoformat(), "2020-01-05T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-02-02T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-03-01T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-04-05T01:01:00")
+        self.assertNextEqual(it, "2020-01-05T01:01:00")
+        self.assertNextEqual(it, "2020-02-02T01:01:00")
+        self.assertNextEqual(it, "2020-03-01T01:01:00")
+        self.assertNextEqual(it, "2020-04-05T01:01:00")
 
     def test_it_handles_dom_star(self) -> None:
         # "First Monday of the month"
         it = CronSim("1 1 */100,1-7 * MON", NOW)
-        self.assertEqual(next(it).isoformat(), "2020-01-06T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-02-03T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-03-02T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-04-06T01:01:00")
+        self.assertNextEqual(it, "2020-01-06T01:01:00")
+        self.assertNextEqual(it, "2020-02-03T01:01:00")
+        self.assertNextEqual(it, "2020-03-02T01:01:00")
+        self.assertNextEqual(it, "2020-04-06T01:01:00")
 
     def test_it_handles_no_matches(self) -> None:
         # The first date of the month *and* the fourth Monday of the month
@@ -286,18 +289,18 @@ class TestIterator(unittest.TestCase):
     def test_it_handles_every_x_weekdays(self) -> None:
         # "every 3rd weekday" means "every 3rd weekday starting from Sunday"
         it = CronSim("1 1 * * */3", NOW)
-        self.assertEqual(next(it).isoformat(), "2020-01-01T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-01-04T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-01-05T01:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-01-08T01:01:00")
+        self.assertNextEqual(it, "2020-01-01T01:01:00")
+        self.assertNextEqual(it, "2020-01-04T01:01:00")
+        self.assertNextEqual(it, "2020-01-05T01:01:00")
+        self.assertNextEqual(it, "2020-01-08T01:01:00")
 
     def test_it_handles_seconds(self) -> None:
         it = CronSim("*/15 * * * * *", NOW)
-        self.assertEqual(next(it).isoformat(), "2020-01-01T00:00:15")
-        self.assertEqual(next(it).isoformat(), "2020-01-01T00:00:30")
-        self.assertEqual(next(it).isoformat(), "2020-01-01T00:00:45")
-        self.assertEqual(next(it).isoformat(), "2020-01-01T00:01:00")
-        self.assertEqual(next(it).isoformat(), "2020-01-01T00:01:15")
+        self.assertNextEqual(it, "2020-01-01T00:00:15")
+        self.assertNextEqual(it, "2020-01-01T00:00:30")
+        self.assertNextEqual(it, "2020-01-01T00:00:45")
+        self.assertNextEqual(it, "2020-01-01T00:01:00")
+        self.assertNextEqual(it, "2020-01-01T00:01:15")
 
 
 class TestDstTransitions(unittest.TestCase):
@@ -590,6 +593,10 @@ class TestExplain(unittest.TestCase):
     def test_it_works(self) -> None:
         result = CronSim("* * * * *", NOW).explain()
         self.assertEqual(result, "Every minute")
+
+    def test_it_handles_seconds(self) -> None:
+        result = CronSim("* * * * * *", NOW).explain()
+        self.assertEqual(result, "Every second")
 
 
 class TestReverse(unittest.TestCase):
