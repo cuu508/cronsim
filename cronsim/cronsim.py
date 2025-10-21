@@ -185,9 +185,16 @@ class CronSim:
             # No special DST handling for UTC
             pass
         else:
-            if not self.parts[1].startswith("*") and not self.parts[2].startswith("*"):
+            if (
+                not self.parts[1].startswith("*")
+                and not self.parts[2].startswith("*")
+                and len(expr.split()) == 5
+            ):
                 # Will use special handling for jobs that run at specific time, or
                 # with a granularity greater than one hour (to mimic Debian cron).
+                # Only do this for 5-field expressions. 6-field expressions
+                # are not Debian cron compatible anyway, and so should not be
+                # affected by Debian cron quirks.
                 self.fixup_tz = self.dt.tzinfo
                 self.dt = self.dt.replace(tzinfo=None)
 

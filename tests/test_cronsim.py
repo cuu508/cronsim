@@ -553,6 +553,28 @@ class TestDstTransitions(unittest.TestCase):
         self.assertNextEqual(w, "2021-10-31T03:00:00+02:00")
         self.assertNextEqual(w, "2021-10-31T03:01:00+02:00")
 
+    def test_no_tz_fixup_for_subminute_granularity(self) -> None:
+        now = datetime(2021, 3, 28, 1, 31, tzinfo=self.tz)
+        w = CronSim("11,22 30 1,2,3,4 * * *", now)
+        self.assertNextEqual(w, "2021-03-28T02:30:11+02:00")
+        self.assertNextEqual(w, "2021-03-28T02:30:22+02:00")
+        self.assertNextEqual(w, "2021-03-28T04:30:11+03:00")
+        self.assertNextEqual(w, "2021-03-28T04:30:22+03:00")
+
+    def test_no_tz_fixup_with_nonzero_seconds_field(self) -> None:
+        now = datetime(2021, 3, 28, 1, 31, tzinfo=self.tz)
+        w = CronSim("33 30 1-10 * * *", now)
+        self.assertNextEqual(w, "2021-03-28T02:30:33+02:00")
+        self.assertNextEqual(w, "2021-03-28T04:30:33+03:00")
+        self.assertNextEqual(w, "2021-03-28T05:30:33+03:00")
+
+    def test_no_tz_fixup_with_zero_seconds_field(self) -> None:
+        now = datetime(2021, 3, 28, 1, 31, tzinfo=self.tz)
+        w = CronSim("0 30 1-10 * * *", now)
+        self.assertNextEqual(w, "2021-03-28T02:30:00+02:00")
+        self.assertNextEqual(w, "2021-03-28T04:30:00+03:00")
+        self.assertNextEqual(w, "2021-03-28T05:30:00+03:00")
+
 
 class TestOptimizations(unittest.TestCase):
     def test_it_skips_fixup_for_naive_datetimes(self) -> None:
@@ -603,6 +625,9 @@ class TestReverse(unittest.TestCase):
         "*/30 30 */2 * * *",
         "0-1 30 */2 * * *",
         "0,59 30 */2 * * *",
+        "11,22 29 1,2,3,4 * * *",
+        "33 30 1-10 * * *",
+        "0 30 1-10 * * *",
     ]
     tz = ZoneInfo("Europe/Riga")
 
