@@ -151,7 +151,7 @@ class CronSim:
     LAST_WEEKDAY = -1001
 
     def __init__(self, expr: str, dt: datetime, reverse: bool = False):
-        self.dt = dt.replace(microsecond=0)
+        self.dt = dt
         self.tick_direction = -1 if reverse else 1
 
         self.parts = expr.upper().split()
@@ -524,7 +524,12 @@ class CronSim:
             break
 
     def __next__(self) -> datetime:
-        self.tick()
+        if self.tick_direction == 1 or not self.dt.microsecond:
+            self.tick()
+        elif self.dt.tzinfo not in (None, UTC):
+            # Preserve tick's timezone normalization without stepping backward.
+            self.dt = self.dt.astimezone(UTC).astimezone(self.dt.tzinfo)
+        self.dt = self.dt.replace(microsecond=0)
 
         if self.tick_direction == 1:
             self.advance()

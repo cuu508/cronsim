@@ -654,6 +654,39 @@ class TestReverse(unittest.TestCase):
         for sample in self.samples:
             self._test(sample, now)
 
+    def test_it_keeps_match_before_fractional_start(self) -> None:
+        cases = [
+            ("* * * * *", "2025-01-01T12:00:00.000001", "2025-01-01T12:00:00"),
+            ("*/15 * * * * *", "2025-01-01T12:00:15.999999", "2025-01-01T12:00:15"),
+            ("0 0 * * *", "2025-01-01T00:00:00.500000", "2025-01-01T00:00:00"),
+        ]
+        for expr, start, expected in cases:
+            for tz in (None, timezone.utc, self.tz):
+                with self.subTest(expr=expr, tz=tz):
+                    now = datetime.fromisoformat(start).replace(tzinfo=tz)
+                    it = CronSim(expr, now, reverse=True)
+                    self.assertEqual(next(it), datetime.fromisoformat(expected).replace(tzinfo=tz))
+
+    def test_it_keeps_fractional_start_fold(self) -> None:
+        now = datetime(2021, 10, 31, 3, 0, 0, 500000, tzinfo=self.tz, fold=1)
+        it = CronSim("* * * * * *", now, reverse=True)
+        result = next(it)
+        self.assertEqual(result.isoformat(), "2021-10-31T03:00:00+02:00")
+        self.assertEqual(result.fold, 1)
+        self.assertEqual(next(it).isoformat(), "2021-10-31T03:59:59+03:00")
+
+    def test_it_normalizes_fractional_start_in_dst_gap(self) -> None:
+        for expr in ("* * * * *", "* * * * * *"):
+            for fold, expected in (
+                (0, "2021-03-28T04:30:00+03:00"),
+                (1, "2021-03-28T02:30:00+02:00"),
+            ):
+                with self.subTest(expr=expr, fold=fold):
+                    now = datetime(2021, 3, 28, 3, 30, 0, 500000, tzinfo=self.tz, fold=fold)
+                    result = next(CronSim(expr, now, reverse=True))
+                    self.assertEqual(result.isoformat(), expected)
+                    self.assertLess(result.astimezone(timezone.utc), now.astimezone(timezone.utc))
+
     def test_it_handles_dst_mar(self) -> None:
         now = datetime(2021, 3, 28, 1, 30, tzinfo=self.tz)
         for sample in self.samples:
