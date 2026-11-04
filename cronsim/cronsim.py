@@ -174,8 +174,9 @@ class CronSim:
         self.months = cast(set[int], Field.MONTH.parse(self.parts[4]))
         self.weekdays = Field.DOW.parse(self.parts[5])
 
-        if len(self.days) and min(self.days) > 29:
-            # Check if we have any month with enough days
+        if min(self.days) > 29 and self.day_and:
+            # If both day-of-month and day-of-week must match,
+            # check if we have any month with enough days
             if min(self.days) > max(DAYS_IN_MONTH[month] for month in self.months):
                 raise CronSimError(Field.DAY.msg())
 

@@ -302,6 +302,13 @@ class TestIterator(unittest.TestCase):
         self.assertNextEqual(it, "2020-01-01T00:01:00")
         self.assertNextEqual(it, "2020-01-01T00:01:15")
 
+    def test_it_handles_feb_30_or_weekday(self) -> None:
+        # Although February 30 can never match, the
+        # day-of week 0 *can* match, and there's an OR
+        # relationship between day-of-month and day-of-week
+        it = CronSim("* * 30 2 0", NOW)
+        self.assertNextEqual(it, "2020-02-02T00:00:00")
+
 
 class TestDstTransitions(unittest.TestCase):
     tz = ZoneInfo("Europe/Riga")

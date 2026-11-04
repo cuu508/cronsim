@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 
 ## 2.8-dev - Unreleased
 - Remove python 3.10 support (EOL)
+- Add handling for "* * 30 2 0" special case (#9)
 
 ## 2.7 - 2025-10-21
 - Remove python 3.8 and 3.9 support (EOL)
