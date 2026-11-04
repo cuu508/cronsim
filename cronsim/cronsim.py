@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import calendar
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timezone
 from datetime import timedelta as td
-from datetime import timezone
 from enum import IntEnum
 from typing import cast
 
