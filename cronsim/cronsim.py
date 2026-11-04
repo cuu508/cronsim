@@ -150,6 +150,10 @@ class CronSim:
     LAST_WEEKDAY = -1001
 
     def __init__(self, expr: str, dt: datetime, reverse: bool = False):
+        # If the passed datetime has microseconds and we are iterating in reverse
+        # then stripping the microseconds serves as the first tick.
+        # Set the `skip_initial_tick` flag to tell __next__() to skip a tick once.
+        self.skip_initial_tick = bool(reverse and dt.microsecond)
         self.dt = dt.replace(microsecond=0)
         self.tick_direction = -1 if reverse else 1
 
@@ -526,7 +530,16 @@ class CronSim:
             break
 
     def __next__(self) -> datetime:
-        self.tick()
+        if self.skip_initial_tick:
+            # If skip_initial_tick flag is set then un-set it and
+            # *do not* call tick(). This is important if the user
+            # passes a datetime with microseconds, and is iterating
+            # in reverse. We strip out the microseconds, which serves
+            # as the initial tick. So we must avoid making an extra
+            # tick here.
+            self.skip_initial_tick = False
+        else:
+            self.tick()
 
         if self.tick_direction == 1:
             self.advance()

@@ -678,6 +678,11 @@ class TestReverse(unittest.TestCase):
         with self.assertRaises(StopIteration):
             next(it)
 
+    def test_it_handles_microseconds(self) -> None:
+        now = datetime(2020, 1, 1, microsecond=123)
+        it = CronSim("0 0 * * *", now, reverse=True)
+        self.assertEqual(next(it), datetime(2020, 1, 1))
+
 
 if __name__ == "__main__":
     unittest.main()
