@@ -354,14 +354,16 @@ class CronSim:
         if d.day in self.days:
             return True
 
-        # Optimization: there are no months with fewer than 28 days.
+        # The `and d.day >= 26` clause is an optimization to reduce
+        # last_weekday() calls: there are no months with fewer than 28 days.
         # If 28th is Sunday, the last weekday of the month is the 26th.
         # Any date before 26th cannot be the the last weekday of the month.
         if self.LAST_WEEKDAY in self.days and d.day >= 26:
             if d.day == last_weekday(d.year, d.month):
                 return True
 
-        # Optimization: there are no months with fewer than 28 days,
+        # The `and d.day >= 28` clause is an optimization to reduce monthrange()
+        # calls: there are no months with fewer than 28 days,
         # so any date before 28th cannot be the the last day of the month
         if self.LAST in self.days and d.day >= 28:
             _, last = calendar.monthrange(d.year, d.month)
