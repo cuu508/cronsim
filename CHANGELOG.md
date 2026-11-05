@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## 2.8-dev - Unreleased
+## 2.8 - 2026-11-05
 - Remove python 3.10 support (EOL)
 - Add handling for "* * 30 2 0" special case (#9)
 - Fix a bug in microsecond truncation when iterating in reverse (#8)
