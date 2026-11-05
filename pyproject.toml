@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cronsim"
-version = "2.8-dev"
+version = "2.8"
 authors = [{ name = "Pēteris Caune", email = "cuu508@monkeyseemonkeydo.lv" }]
 description = "Cron expression parser and evaluator"
 readme = "README.md"
