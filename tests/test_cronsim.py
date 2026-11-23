@@ -56,6 +56,14 @@ class TestParse(unittest.TestCase):
         w = CronSim("0-10/2 * * * *", NOW)
         self.assertEqual(w.minutes, {0, 2, 4, 6, 8, 10})
 
+    def test_it_parses_single_item_interval_with_step(self) -> None:
+        w = CronSim("1-1/5 * * * *", NOW)
+        self.assertEqual(w.minutes, {1})
+
+    def test_it_parses_single_symoblic_weekday_interval_with_step(self) -> None:
+        w = CronSim("* * * * MON-MON/2", NOW)
+        self.assertEqual(w.weekdays, {1})
+
     def test_it_parses_start_with_step(self) -> None:
         w = CronSim("5/15 * * * *", NOW)
         self.assertEqual(w.minutes, {5, 20, 35, 50})

@@ -1,6 +1,9 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## 2.9 - 2026-11-23
+- Fix the parsing of single-item intervals with step (#11)
+
 ## 2.8 - 2026-11-05
 - Remove python 3.10 support (EOL)
 - Add handling for "* * 30 2 0" special case (#9)

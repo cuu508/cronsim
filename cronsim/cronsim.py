@@ -98,7 +98,10 @@ class Field(IntEnum):
             if items == {CronSim.LAST} or items == {CronSim.LAST_WEEKDAY}:
                 return items
 
-            if len(items) == 1:
+            # Is this a start-with-a-step case?
+            # Test for absence of "-" because intervals like "1-1" parse
+            # to a single item too.
+            if len(items) == 1 and "-" not in term:
                 start = items.pop()
                 assert isinstance(start, int)
                 end = max(RANGES[self])
